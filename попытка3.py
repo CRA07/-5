@@ -7,7 +7,7 @@ from openpyxl.reader.excel import load_workbook
 
 app = Flask(__name__)
 EXCEL_FILE = os.getenv("EXCEL_PATH", "popitka5.xlsx")   # лучше указывать /data/popitka5.xlsx на хостинге
-WEBHOOK_TOKEN = os.getenv("WEBHOOK_TOKEN", "")          # необязательный токен ?token=...
+WEBHOOK_TOKEN = os.getenv("WEBHOOK_TOKEN", "token20220705")          # необязательный токен ?token=...
 PORT = int(os.getenv("PORT", "8000"))
 BIND_HOST = os.getenv("BIND_HOST", "0.0.0.0")
 
@@ -123,4 +123,5 @@ def webhook():
 
 if __name__ == "__main__":
     init_excel()
+
     app.run(host=BIND_HOST, port=PORT)
