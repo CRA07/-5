@@ -42,6 +42,16 @@ PRODUCTION_DEFECTS = ["нет даты производства ",	"волос �
 ]
 MARKETPLACES = ["вб", "озон", "ям"]
 
+def normalize(text):
+    return re.sub(r'[\s_]+', '', text.lower())
+
+def find_match(text, collection):
+    text_norm = normalize(text)
+    for item in collection:
+        if normalize(item) in text_norm:
+            return item
+    return ""
+
 
 def ensure_parent_dir(path: str):
     d = os.path.dirname(path)
@@ -138,6 +148,7 @@ def webhook():
 if __name__ == "__main__":
     init_excel()
     app.run(host=BIND_HOST, port=PORT)
+
 
 
 
