@@ -99,7 +99,7 @@ def webhook():
                 defect_category = DEFECT_CATEGORIES.get(found_defect, "") if found_defect else ""
                 marketplace = next((m for m in MARKETPLACES if m in content_without_tag), "")
                 if found_product and found_defect:
-                    sheet = wb["Брак Склад"]
+                    sheet = wb["Брак Склада"]
                     sheet.append([time_str, author_id, found_product, marketplace, found_defect, defect_category, text])
                     wb.save(EXCEL_FILE)
                     return "", 200
@@ -125,3 +125,4 @@ if __name__ == "__main__":
     init_excel()
 
     app.run(host=BIND_HOST, port=PORT)
+
