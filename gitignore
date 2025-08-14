@@ -1,4 +1,4 @@
-*.xlsx
 *.lock
 __pycache__/
 .env
+
