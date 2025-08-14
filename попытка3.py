@@ -1,4 +1,6 @@
 import os
+import re
+import pandas as pd
 from flask import Flask, request
 import openpyxl
 from datetime import datetime
@@ -41,6 +43,23 @@ DEFECT_CATEGORIES = {
 PRODUCTION_DEFECTS = ["нет даты производства ",	"волос в банке", "пустая банка", "банка без защитной фольги",	"расплавленный вид",	"недостающее количество капсул", "капсулы в масле", "капсулы в пятнах",	"черная крышка внутри банки",	"неприятный запах от капсул",	"пустые капсулы в банке ",	"просрочка",	"вскрытая банка",	"пришел без этикетки",	"вскрыт пакет с селикагелем",	"жалоба на плесень ",
 ]
 MARKETPLACES = ["вб", "озон", "ям"]
+
+def normalize(text: str) -> str:
+    """Приводит текст к нижнему регистру, нормализует латиницу/кириллицу, убирает пробелы и подчёркивания"""
+    text = text.lower()
+    latin_to_cyrillic = {
+        'a': 'а',
+        'e': 'е',
+        'o': 'о',
+        'p': 'р',
+        'c': 'с',
+        'y': 'у',
+        'x': 'х'
+    }
+    text = ''.join(latin_to_cyrillic.get(ch, ch) for ch in text)
+    text = re.sub(r'[\s_]+', '', text)
+    return text
+
 
 def normalize(text):
     return re.sub(r'[\s_]+', '', text.lower())
@@ -148,6 +167,7 @@ def webhook():
 if __name__ == "__main__":
     init_excel()
     app.run(host=BIND_HOST, port=PORT)
+
 
 
 
