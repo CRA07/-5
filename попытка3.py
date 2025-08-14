@@ -95,7 +95,7 @@ def webhook():
 
         # Запишем, даже если маркетплейса нет
         if found_product and found_defect:
-            sheet = wb["Брак Склад"]
+            sheet = wb["Брак Склада"]
             sheet.append([
                 time_str,
                 author_id,
@@ -131,4 +131,5 @@ def webhook():
 if __name__ == "__main__":
     init_excel()
     app.run(host=BIND_HOST, port=PORT)
+
 
