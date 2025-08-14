@@ -93,8 +93,7 @@ def webhook():
 
     try:
         time_str = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00")).strftime("%Y-%m-%d")
-    except:
-        time_str = datetime.utcnow().strftime("%Y-%m-%d")
+
 
 
     # Ищем ключевые слова в сообщении
@@ -136,6 +135,7 @@ def webhook():
 if __name__ == "__main__":
     init_excel()
     app.run(host=BIND_HOST, port=PORT)
+
 
 
 
