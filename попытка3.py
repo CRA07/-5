@@ -6,7 +6,7 @@ from filelock import FileLock
 from openpyxl.reader.excel import load_workbook
 
 app = Flask(__name__)
-EXCEL_FILE = os.getenv("EXCEL_PATH", "popitka5.xlsx")
+EXCEL_FILE = os.getenv("EXCEL_PATH", "data/popitka5.xlsx")
 WEBHOOK_TOKEN = os.getenv("WEBHOOK_TOKEN", "token20220705")          # необязательный токен ?token=...
 PORT = int(os.getenv("PORT", "8000"))
 BIND_HOST = os.getenv("BIND_HOST", "0.0.0.0")
@@ -52,7 +52,7 @@ def init_excel():
     if not os.path.exists(EXCEL_FILE):
 
         from openpyxl import Workbook
-        filename = "popitka5.xlsx"
+        filename = "data/popitka5.xlsx"
         wb = Workbook()
         sheet1 = wb.active
         sheet1.title = "Брак Склада"
@@ -60,7 +60,7 @@ def init_excel():
         "Текст сообщения"])
         sheet2 = wb.create_sheet(title="Производство")
         sheet2.append(["Дата", "Автор", "Код продукта", "Описание проблемы", "Текст сообщения"])
-        wb.save(filename="popitka5.xlsx")
+        wb.save(filename="data/popitka5.xlsx")
 
 
 @app.route("/webhook", methods=["POST"])
@@ -135,3 +135,4 @@ def webhook():
 if __name__ == "__main__":
     init_excel()
     app.run(host=BIND_HOST, port=PORT)
+
