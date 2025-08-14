@@ -98,6 +98,7 @@ def webhook():
 
         # Пишем, даже если нет маркетплейса, но есть продукт и дефект
         if found_product and found_defect:
+           wb = openpyxl.load_workbook(EXCEL_FILE)
             sheet = wb["Брак Склад"]
             sheet.append([
                 time_str,
@@ -117,6 +118,7 @@ def webhook():
         found_complaint = find_match(content_without_tag, PRODUCTION_DEFECTS)
 
         if found_product and found_complaint:
+                   wb = openpyxl.load_workbook(EXCEL_FILE)
             sheet = wb["Производство"]
             sheet.append([
                 time_str,
@@ -134,5 +136,6 @@ if __name__ == "__main__":
     init_excel()
 
     app.run(host=BIND_HOST, port=PORT)
+
 
 
