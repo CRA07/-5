@@ -6,7 +6,7 @@ from filelock import FileLock
 from openpyxl.reader.excel import load_workbook
 
 app = Flask(__name__)
-EXCEL_FILE = os.getenv("EXCEL_PATH", "popitka5.xlsx")   # лучше указывать /data/popitka5.xlsx на хостинге
+EXCEL_FILE = os.getenv("EXCEL_PATH", "popitka5.xlsx")
 WEBHOOK_TOKEN = os.getenv("WEBHOOK_TOKEN", "token20220705")          # необязательный токен ?token=...
 PORT = int(os.getenv("PORT", "8000"))
 BIND_HOST = os.getenv("BIND_HOST", "0.0.0.0")
@@ -35,7 +35,7 @@ DEFECT_CATEGORIES = {
     "нет упаковки": "упаковка",
     "просрочка": "просрочка"
 }
-PRODUCTION_DEFECTS = ["нет даты производства ",	"волос в банке", "пустая банка",	"банка без защитной фольги",	"расплавленный вид",	"недостающее количество капсул", "капсулы в масле", "капсулы в пятнах",	"черная крышка внутри банки",	"неприятный запах от капсул",	"пустые капсулы в банке ",	"просрочка",	"вскрытая банка",	"пришел без этикетки",	"вскрыт пакет с селикагелем",	"жалоба на плесень ",
+PRODUCTION_DEFECTS = ["нет даты производства ",	"волос в банке", "пустая банка", "банка без защитной фольги",	"расплавленный вид",	"недостающее количество капсул", "капсулы в масле", "капсулы в пятнах",	"черная крышка внутри банки",	"неприятный запах от капсул",	"пустые капсулы в банке ",	"просрочка",	"вскрытая банка",	"пришел без этикетки",	"вскрыт пакет с селикагелем",	"жалоба на плесень ",
 ]
 MARKETPLACES = ["вб", "озон", "ям"]
 
@@ -98,7 +98,7 @@ def webhook():
 
         # Пишем, даже если нет маркетплейса, но есть продукт и дефект
         if found_product and found_defect:
-           wb = openpyxl.load_workbook(EXCEL_FILE)
+            wb = openpyxl.load_workbook(EXCEL_FILE)
             sheet = wb["Брак Склад"]
             sheet.append([
                 time_str,
@@ -118,7 +118,7 @@ def webhook():
         found_complaint = find_match(content_without_tag, PRODUCTION_DEFECTS)
 
         if found_product and found_complaint:
-                   wb = openpyxl.load_workbook(EXCEL_FILE)
+            wb = openpyxl.load_workbook(EXCEL_FILE)
             sheet = wb["Производство"]
             sheet.append([
                 time_str,
@@ -134,8 +134,4 @@ def webhook():
 
 if __name__ == "__main__":
     init_excel()
-
     app.run(host=BIND_HOST, port=PORT)
-
-
-
