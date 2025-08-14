@@ -8,9 +8,11 @@ from filelock import FileLock, Timeout
 from openpyxl.reader.excel import load_workbook
 
 app = Flask(__name__)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-EXCEL_FILE = os.path.join(BASE_DIR, "data", "popitka5.xlsx")
+EXCEL_FILE = r"C:\Users\roman\OneDrive\Desktop\PythonProject1\popitka5.xlsx" 
 LOCK_FILE = EXCEL_FILE + ".lock"
+
+#строка создания папки, если ее нет
+os.makedirs(os.path.dirname(EXCEL_FILE), exist_ok=True)
 
 # Настройка логирования
 logging.basicConfig(
@@ -72,6 +74,7 @@ def init_excel():
     try:
         ensure_parent_dir(EXCEL_FILE)
         if not os.path.exists(EXCEL_FILE):
+            logger.info("Создаю новый файл Excel...")
             wb = openpyxl.Workbook()
             sheet1 = wb.active
             sheet1.title = "Брак Склада"
@@ -84,9 +87,34 @@ def init_excel():
                 "Дата", "Автор", "Код продукта", "Описание проблемы", "Текст сообщения"
             ])
             wb.save(EXCEL_FILE)
-            logger.info(f"Файл Excel создан: {EXCEL_FILE}")
+            wb.close()
+        logger.info(f"Файл создан: {EXCEL_FILE}")
+    else:
+        logger.info(f"Файл уже существует: {EXCEL_FILE}")
     except Exception as e:
         logger.error(f"Ошибка при создании Excel: {e}", exc_info=True)
+
+
+def write_to_excel(data, sheet_name):
+    """Записывает данные в указанный лист Excel с блокировкой."""
+    try:
+        with FileLock(LOCK_FILE, timeout=5):
+            logger.info(f"Блокировка получена. Записываю в {sheet_name}...")
+            
+            wb = openpyxl.load_workbook(EXCEL_FILE)
+            sheet = wb[sheet_name]
+            sheet.append(data)
+            wb.save(EXCEL_FILE)
+            wb.close()  # Важно для Windows!
+            
+            logger.info("Данные успешно записаны.")
+            return True
+    except Timeout:
+        logger.error("Файл заблокирован. Попробуйте позже.")
+        return False
+    except Exception as e:
+        logger.error(f"Ошибка записи: {str(e)}", exc_info=True)
+        return False
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
@@ -185,8 +213,19 @@ def webhook():
         logger.error(f"Критическая ошибка: {e}", exc_info=True)
         return jsonify({"error": "Internal server error"}), 500
 
+
+def find_match(text, collection):
+    """Ищет совпадение в коллекции с учетом нормализации."""
+    text_norm = re.sub(r'[\s_]+', '', text.lower())
+    for item in collection:
+        if re.sub(r'[\s_]+', '', item.lower()) in text_norm:
+            return item
+    return ""
+
+
 if __name__ == "__main__":
     logger.info("Инициализация Excel...")
     init_excel()
     logger.info(f"Сервер запущен на {BIND_HOST}:{PORT}")
     app.run(host=BIND_HOST, port=PORT)
+
