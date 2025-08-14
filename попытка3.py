@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 # Определяем путь к Excel-файлу в репозитории
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-EXCEL_FILE = os.path.join(BASE_DIR, "popitka5.xlsx")
+EXCEL_FILE = os.path.join(BASE_DIR, "data", "popitka5.xlsx")
 
 
 WEBHOOK_TOKEN = os.getenv("WEBHOOK_TOKEN", "token20220705")          #не обязательный токен ?token=... ОБЯЗАТЕЛЬНЫЙ
@@ -131,3 +131,4 @@ def webhook():
 if __name__ == "__main__":
     init_excel()
     app.run(host=BIND_HOST, port=PORT)
+
