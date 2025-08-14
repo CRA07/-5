@@ -78,7 +78,7 @@ def webhook():
 
     try:
         time_str = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00")).strftime("%Y-%m-%d")
-    except Exception:
+    except:
         time_str = datetime.utcnow().strftime("%Y-%m-%d")
 
 
@@ -129,13 +129,10 @@ def webhook():
 
     return "", 200
 
-    except Exception:
-        # В проде лучше логировать; тут просто молчим, чтобы Пачка не ретраила бесконечно
-        return "", 200
-
 
 if __name__ == "__main__":
     init_excel()
 
     app.run(host=BIND_HOST, port=PORT)
+
 
