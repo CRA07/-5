@@ -82,40 +82,53 @@ def webhook():
         time_str = datetime.utcnow().strftime("%Y-%m-%d")
 
 
-    # Ищем ключевые слова в сообщении
-    found_product = next((p for p in PRODUCTS if p in text), "")
+    def find_match(text, collection):
+        for item in collection:
+            if item.lower() in text:
+                return item
+        return ""
 
-    try:
-        # Блокировка файла на время записи
-        with FileLock(LOCK_FILE, timeout=20):
-            init_excel()
-            wb = openpyxl.load_workbook(EXCEL_FILE)
+    if text.startswith("#склад"):
+        content_without_tag = text.replace("#склад", "", 1).strip()
 
-            if text.startswith("#склад"):
-                # Убираем хештег и пробелы, ищем продукт
-                content_without_tag = text.replace("#склад", "", 1).strip()
-                found_product = next((p for p in PRODUCTS if p.lower() in content_without_tag), "")
-                found_defect = next((d for d in WAREHOUSE_DEFECTS if d in content_without_tag), "")
-                defect_category = DEFECT_CATEGORIES.get(found_defect, "") if found_defect else ""
-                marketplace = next((m for m in MARKETPLACES if m in content_without_tag), "")
-                if found_product and found_defect:
-                    sheet = wb["Брак Склад"]
-                    sheet.append([time_str, author_id, found_product, marketplace, found_defect, defect_category, text])
-                    wb.save(EXCEL_FILE)
-                    return "", 200
+        found_product = find_match(content_without_tag, PRODUCTS)
+        found_defect = find_match(content_without_tag, WAREHOUSE_DEFECTS)
+        defect_category = DEFECT_CATEGORIES.get(found_defect, "") if found_defect else ""
+        marketplace = find_match(content_without_tag, MARKETPLACES)
 
-            elif text.startswith("#производство"):
-                content_without_tag = text.replace("#производство", "", 1).strip()
-                found_product = next((p for p in PRODUCTS if p.lower() in content_without_tag), "")
-                found_complaint = next((c for c in PRODUCTION_DEFECTS if c in content_without_tag), "")
-                if found_product and found_complaint:
-                    sheet = wb["Производство"]
-                    sheet.append([time_str, author_id, found_product, found_complaint, text])
-                    wb.save(EXCEL_FILE)
-                    return "", 200
+        # Пишем, даже если нет маркетплейса, но есть продукт и дефект
+        if found_product and found_defect:
+            sheet = wb["Брак Склад"]
+            sheet.append([
+                time_str,
+                author_id,
+                found_product,
+                marketplace if marketplace else "",
+                found_defect,
+                defect_category,
+                text
+            ])
+            wb.save(EXCEL_FILE)
 
-            # Если ничего не нашли — тоже молчим
-            return "", 200
+    elif text.startswith("#производство"):
+        content_without_tag = text.replace("#производство", "", 1).strip()
+
+        found_product = find_match(content_without_tag, PRODUCTS)
+        found_complaint = find_match(content_without_tag, PRODUCTION_DEFECTS)
+
+        if found_product and found_complaint:
+            sheet = wb["Производство"]
+            sheet.append([
+                time_str,
+                author_id,
+                found_product,
+                found_complaint,
+                text
+            ])
+            wb.save(EXCEL_FILE)
+
+    return "", 200
+
     except Exception:
         # В проде лучше логировать; тут просто молчим, чтобы Пачка не ретраила бесконечно
         return "", 200
@@ -125,3 +138,4 @@ if __name__ == "__main__":
     init_excel()
 
     app.run(host=BIND_HOST, port=PORT)
+
