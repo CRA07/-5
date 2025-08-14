@@ -1,5 +1,4 @@
 import os
-import re
 from flask import Flask, request
 import openpyxl
 from datetime import datetime
@@ -7,11 +6,8 @@ from filelock import FileLock
 from openpyxl.reader.excel import load_workbook
 
 app = Flask(__name__)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-EXCEL_FILE = os.path.join(BASE_DIR, "data", "popitka5.xlsx")        #строка пути для рендера к файлу эксель на гитхаб
-
-
-WEBHOOK_TOKEN = os.getenv("WEBHOOK_TOKEN", "token20220705")          #не обязательный токен ?token=... ОБЯЗАТЕЛЬНЫЙ 
+EXCEL_FILE = os.getenv("EXCEL_PATH", "popitka5.xlsx")   # лучше указывать /data/popitka5.xlsx на хостинге
+WEBHOOK_TOKEN = os.getenv("WEBHOOK_TOKEN", "token20220705")          # необязательный токен ?token=...
 PORT = int(os.getenv("PORT", "8000"))
 BIND_HOST = os.getenv("BIND_HOST", "0.0.0.0")
 
@@ -39,20 +35,9 @@ DEFECT_CATEGORIES = {
     "нет упаковки": "упаковка",
     "просрочка": "просрочка"
 }
-PRODUCTION_DEFECTS = ["нет даты производства ",	"волос в банке", "пустая банка", "банка без защитной фольги",	"расплавленный вид",	"недостающее количество капсул", "капсулы в масле", "капсулы в пятнах",	"черная крышка внутри банки",	"неприятный запах от капсул",	"пустые капсулы в банке ",	"просрочка",	"вскрытая банка",	"пришел без этикетки",	"вскрыт пакет с селикагелем",	"жалоба на плесень ",
+PRODUCTION_DEFECTS = ["нет даты производства ",	"волос в банке", "пустая банка",	"банка без защитной фольги",	"расплавленный вид",	"недостающее количество капсул", "капсулы в масле", "капсулы в пятнах",	"черная крышка внутри банки",	"неприятный запах от капсул",	"пустые капсулы в банке ",	"просрочка",	"вскрытая банка",	"пришел без этикетки",	"вскрыт пакет с селикагелем",	"жалоба на плесень ",
 ]
 MARKETPLACES = ["вб", "озон", "ям"]
-
-
-def normalize(text):
-    return re.sub(r'[\s_]+', '', text.lower())
-
-def find_match(text, collection):
-    text_norm = normalize(text)
-    for item in collection:
-        if normalize(item) in text_norm:
-            return item
-    return ""
 
 
 def ensure_parent_dir(path: str):
@@ -93,7 +78,8 @@ def webhook():
 
     try:
         time_str = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00")).strftime("%Y-%m-%d")
-
+    except Exception:
+        time_str = datetime.utcnow().strftime("%Y-%m-%d")
 
 
     # Ищем ключевые слова в сообщении
@@ -130,22 +116,12 @@ def webhook():
 
             # Если ничего не нашли — тоже молчим
             return "", 200
+    except Exception:
+        # В проде лучше логировать; тут просто молчим, чтобы Пачка не ретраила бесконечно
+        return "", 200
 
 
 if __name__ == "__main__":
     init_excel()
+
     app.run(host=BIND_HOST, port=PORT)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
