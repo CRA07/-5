@@ -9,13 +9,14 @@ from openpyxl.reader.excel import load_workbook
 
 app = Flask(__name__)
 
-DATA_DIR = r"C:\Users\roman\OneDrive\Desktop\PythonProject1\popitka5.xlsx"
+DATA_DIR = r"C:\Users\roman\OneDrive\Desktop\PythonProject1"
 EXCEL_FILE = os.path.join(DATA_DIR, "popitka5.xlsx")
 LOCK_FILE = os.path.join(DATA_DIR, "popitka5.xlsx.lock")
 
 # строка создания папки, если ее нет
 try:
     os.makedirs(DATA_DIR, exist_ok=True)
+    print(f"Папка создана: {DATA_DIR}")
 except Exception as e:
     print(f"Ошибка при создании папки: {e}")
 
@@ -217,3 +218,4 @@ if __name__ == "__main__":
 
     logger.info(f"Сервер запущен на {BIND_HOST}:{PORT}")
     app.run(host=BIND_HOST, port=PORT)
+
