@@ -8,11 +8,16 @@ from filelock import FileLock, Timeout
 from openpyxl.reader.excel import load_workbook
 
 app = Flask(__name__)
-EXCEL_FILE = r"C:\Users\roman\OneDrive\Desktop\PythonProject1\popitka5.xlsx"
-LOCK_FILE = EXCEL_FILE + ".lock"
+
+DATA_DIR = r"C:\Users\roman\OneDrive\Desktop\PythonProject1\popitka5.xlsx"
+EXCEL_FILE = os.path.join(DATA_DIR, "popitka5.xlsx")
+LOCK_FILE = os.path.join(DATA_DIR, "popitka5.xlsx.lock")
 
 # строка создания папки, если ее нет
-os.makedirs(os.path.dirname(EXCEL_FILE), exist_ok=True)
+try:
+    os.makedirs(DATA_DIR, exist_ok=True)
+except Exception as e:
+    print(f"Ошибка при создании папки: {e}")
 
 # Настройка логирования
 logging.basicConfig(
@@ -64,22 +69,12 @@ def normalize(text):
     return re.sub(r'[\s_]+', '', text.lower())
 
 
-def find_match(text, collection):
-    """Поиск совпадения в коллекции с учётом нормализации."""
-    text_norm = normalize(text)
-    for item in collection:
-        if normalize(item) in text_norm:
-            return item
-    return ""
-
-
 def ensure_parent_dir(path: str):
     """Создание родительской директории, если её нет."""
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
 
 def init_excel():
-    """Инициализация Excel-файла с нужными листами."""
     try:
         ensure_parent_dir(EXCEL_FILE)
         if not os.path.exists(EXCEL_FILE):
@@ -97,9 +92,17 @@ def init_excel():
             wb.close()
             logger.info(f"Файл создан: {EXCEL_FILE}")
         else: logger.info(f"Файл уже существует: {EXCEL_FILE}")
-
     except Exception as e:
         logger.error(f"Ошибка при создании Excel: {e}", exc_info=True)
+
+
+def find_match(text, collection):
+    """Ищет совпадение в коллекции с учетом нормализации."""
+    text_norm = re.sub(r'[\s_]+', '', text.lower())
+    for item in collection:
+        if re.sub(r'[\s_]+', '', item.lower()) in text_norm:
+            return item
+    return ""
 
 
 def write_to_excel(data, sheet_name):
@@ -113,7 +116,6 @@ def write_to_excel(data, sheet_name):
             sheet.append(data)
             wb.save(EXCEL_FILE)
             wb.close()  # Важно для Windows!
-
             logger.info("Данные успешно записаны.")
             return True
     except Timeout:
@@ -126,7 +128,6 @@ def write_to_excel(data, sheet_name):
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    """Обработчик входящих вебхуков."""
     # Проверка токена
     if WEBHOOK_TOKEN and request.args.get("token") != WEBHOOK_TOKEN:
         logger.warning("Неверный токен доступа")
@@ -139,7 +140,7 @@ def webhook():
             return jsonify({"error": "Invalid JSON"}), 400
 
         text = str(data.get("content", "")).strip().lower()
-        author_id = data.get("user_id", "Неизвестно")
+        author = data.get("user_id", "Неизвестно")
         timestamp = data.get("created_at", datetime.now().isoformat())
 
         # Парсинг даты
@@ -158,30 +159,21 @@ def webhook():
             defect = find_match(content, WAREHOUSE_DEFECTS)
             marketplace = find_match(content, MARKETPLACES)
 
-            if not product or not defect:
-                logger.warning(f"Не найдены продукт или дефект: {content}")
-                return jsonify({"warning": "Продукт или дефект не распознаны"}), 200
+            if product and defect:
+                success = write_to_excel([
+                    datetime.now().strftime("%Y-%m-%d"),
+                    author,
+                    product,
+                    marketplace,
+                    defect,
+                    DEFECT_CATEGORIES.get(defect, ""),
+                    text
+                ], "Брак Склада")
 
-            try:
-                with FileLock(LOCK_FILE, timeout=5):
-                    wb = load_workbook(EXCEL_FILE)
-                    sheet = wb["Брак Склада"]
-                    sheet.append([
-                        time_str,
-                        author_id,
-                        product,
-                        marketplace,
-                        defect,
-                        DEFECT_CATEGORIES.get(defect, ""),
-                        text])
-                    wb.save(EXCEL_FILE)
-                    logger.info(f"Данные записаны в лист 'Брак Склада': {product}, {defect}")
-            except Timeout:
-                logger.error("Файл Excel заблокирован. Попробуйте позже.")
-                return jsonify({"error": "File locked"}), 423
-            except Exception as e:
-                logger.error(f"Ошибка записи в Excel: {e}", exc_info=True)
-                return jsonify({"error": "Internal server error"}), 500
+                return jsonify({"success": success}), 200 if success else 500
+            else:
+                logger.warning(f"Не найдены продукт или дефект: {text}")
+                return jsonify({"error": "Product or defect not found"}), 400
 
         # Обработка сообщения для производства
         elif text.startswith("#производство"):
@@ -189,36 +181,25 @@ def webhook():
             product = find_match(content, PRODUCTS)
             defect = find_match(content, PRODUCTION_DEFECTS)
 
-            if not product or not defect:
-                logger.warning(f"Не найдены продукт или дефект: {content}")
-                return jsonify({"warning": "Продукт или дефект не распознаны"}), 200
+            if product and defect:
+                success = write_to_excel([
+                    datetime.now().strftime("%Y-%m-%d"),
+                    author,
+                    product,
+                    defect,
+                    text
+                ], "Производство")
 
-            try:
-                with FileLock(LOCK_FILE, timeout=5):
-                    wb = load_workbook(EXCEL_FILE)
-                    sheet = wb["Производство"]
-                    sheet.append([
-                        time_str,
-                        author_id,
-                        product,
-                        defect,
-                        text
-                    ])
-                    wb.save(EXCEL_FILE)
-                    logger.info(f"Данные записаны в лист 'Производство': {product}, {defect}")
-            except Exception as e:
-                logger.error(f"Ошибка записи в Excel: {e}", exc_info=True)
-                return jsonify({"error": "Internal server error"}), 500
+                return jsonify({"success": success}), 200 if success else 500
+            else:
+                logger.warning(f"Не найдены продукт или дефект: {text}")
+                return jsonify({"error": "Product or defect not found"}), 400
 
-        else:
-            logger.warning(f"Неизвестный тип сообщения: {text}")
-            return jsonify({"error": "Используйте #склад или #производство"}), 400
-
-        return jsonify({"success": True}), 200
+        return jsonify({"error": "Unrecognized command"}), 400
 
     except Exception as e:
-        logger.error(f"Критическая ошибка: {e}", exc_info=True)
-        return jsonify({"error": "Internal server error"}), 500
+        logger.error(f"Ошибка в вебхуке: {str(e)}", exc_info=True)
+        return jsonify({"error": "Internal Server Error"}), 500
 
 
 def find_match(text, collection):
@@ -233,5 +214,6 @@ def find_match(text, collection):
 if __name__ == "__main__":
     logger.info("Инициализация Excel...")
     init_excel()
+
     logger.info(f"Сервер запущен на {BIND_HOST}:{PORT}")
     app.run(host=BIND_HOST, port=PORT)
