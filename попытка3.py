@@ -6,19 +6,52 @@ import openpyxl
 from datetime import datetime
 from filelock import FileLock, Timeout
 from openpyxl.reader.excel import load_workbook
+from pathlib import Path
+
+try:
+    # Автоматическое определение папки со скриптом
+    PROJECT_DIR = Path(__file__).parent
+    
+    # Альтернативные варианты (раскомментируйте нужный):
+    # PROJECT_DIR = Path.home() / "Documents" / "Мой проект"  # Документы
+    # PROJECT_DIR = Path(r"C:\Project")  # Абсолютный путь
+    
+    # Проверяем доступность папки
+    if not PROJECT_DIR.exists():
+        PROJECT_DIR.mkdir(parents=True, exist_ok=True)
+        print(f"Создана папка проекта: {PROJECT_DIR}")
+
 
 app = Flask(__name__)
 
-DATA_DIR = os.path.join(os.path.expanduser("~"), "Desktop")
-EXCEL_FILE = os.path.join(DATA_DIR, "popitka5.xlsx")
-LOCK_FILE = os.path.join(DATA_DIR, "popitka5.xlsx.lock")
+PROJECT_DIR = Path(__file__).parent  # Папка, где лежит этот скрипт
+EXCEL_FILE = PROJECT_DIR / "popitka5.xlsx"
+LOCK_FILE = PROJECT_DIR / "popitka5.xlsx.lock"
+LOG_FILE = PROJECT_DIR / "webhook.log"
 
-# строка создания папки, если ее нет
+
 try:
-    os.makedirs(DATA_DIR, exist_ok=True)
-    print(f"Папка создана: {DATA_DIR}")
+    # Проверяем/создаем лог-файл
+    if not LOG_FILE.exists():
+        LOG_FILE.touch()
+        print(f"Создан лог-файл: {LOG_FILE}")
+    
+    # Проверяем/создаем Excel-файл
+    if not EXCEL_FILE.exists():
+        import openpyxl
+        wb = openpyxl.Workbook()
+        wb.save(EXCEL_FILE)
+        print(f"Создан Excel-файл: {EXCEL_FILE}")
+    
+    print("="*50)
+    print(f"Рабочая папка: {PROJECT_DIR}")
+    print(f"Excel файл: {EXCEL_FILE}")
+    print(f"Лог файл: {LOG_FILE}")
+    print("="*50)
+
 except Exception as e:
-    print(f"Ошибка при создании папки: {e}")
+    print(f"Ошибка создания файлов: {e}")
+    exit()
 
 # Настройка логирования
 logging.basicConfig(
@@ -218,6 +251,7 @@ if __name__ == "__main__":
 
     logger.info(f"Сервер запущен на {BIND_HOST}:{PORT}")
     app.run(host=BIND_HOST, port=PORT)
+
 
 
 
