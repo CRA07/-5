@@ -9,7 +9,7 @@ from openpyxl.reader.excel import load_workbook
 
 app = Flask(__name__)
 
-DATA_DIR = os.path.join(os.path.expanduser("~"), "Desktop", "popitka5.xlsx")
+DATA_DIR = os.path.join(os.path.expanduser("~"), "Desktop")
 EXCEL_FILE = os.path.join(DATA_DIR, "popitka5.xlsx")
 LOCK_FILE = os.path.join(DATA_DIR, "popitka5.xlsx.lock")
 
@@ -218,6 +218,7 @@ if __name__ == "__main__":
 
     logger.info(f"Сервер запущен на {BIND_HOST}:{PORT}")
     app.run(host=BIND_HOST, port=PORT)
+
 
 
 
