@@ -10,11 +10,52 @@ from pathlib import Path
 # --- Конфигурация ---
 app = Flask(__name__)
 
-# Пути к файлам
-PROJECT_DIR = Path(__file__).parent
+try:
+    # Автоматическое определение папки со скриптом
+    PROJECT_DIR = Path(__file__).parent
+
+    # Альтернативные варианты (раскомментируйте нужный):
+    # PROJECT_DIR = Path.home() / "Documents" / "Мой проект"  # Документы
+    # PROJECT_DIR = Path(r"C:\Project")  # Абсолютный путь
+
+    # Проверяем доступность папки
+    if not PROJECT_DIR.exists():
+        PROJECT_DIR.mkdir(parents=True, exist_ok=True)
+        print(f"Создана папка проекта: {PROJECT_DIR}")
+except Exception as e:
+    print(f"Ошибка определения пути: {e}")
+    exit()
+
+app = Flask(__name__)
+
+PROJECT_DIR = Path(__file__).parent  # Папка, где лежит этот скрипт
 EXCEL_FILE = PROJECT_DIR / "popitka5.xlsx"
 LOCK_FILE = PROJECT_DIR / "popitka5.xlsx.lock"
 LOG_FILE = PROJECT_DIR / "webhook.log"
+
+try:
+    # Проверяем/создаем лог-файл
+    if not LOG_FILE.exists():
+        LOG_FILE.touch()
+        print(f"Создан лог-файл: {LOG_FILE}")
+
+    # Проверяем/создаем Excel-файл
+    if not EXCEL_FILE.exists():
+        import openpyxl
+
+        wb = openpyxl.Workbook()
+        wb.save(EXCEL_FILE)
+        print(f"Создан Excel-файл: {EXCEL_FILE}")
+
+    print("=" * 50)
+    print(f"Рабочая папка: {PROJECT_DIR}")
+    print(f"Excel файл: {EXCEL_FILE}")
+    print(f"Лог файл: {LOG_FILE}")
+    print("=" * 50)
+
+except Exception as e:
+    print(f"Ошибка создания файлов: {e}")
+    exit()
 
 # Настройка логирования
 logging.basicConfig(
@@ -213,3 +254,4 @@ if __name__ == "__main__":
     # Запуск сервера
     logger.info(f"Сервер запущен на {BIND_HOST}:{PORT}")
     app.run(host=BIND_HOST, port=PORT)
+
