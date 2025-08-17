@@ -100,31 +100,39 @@ PRODUCTION_DEFECTS = ["нет даты производства ", "волос �
 
 MARKETPLACES = ["вб", "озон", "ям"]
 
+def normalize(text):
+    """Нормализация текста для поиска"""
+    return re.sub(r'[\s_]+', '', text.lower())
+
+def find_match(text, collection):
+    """Поиск совпадения в коллекции"""
+    text_norm = normalize(text)
+    for item in collection:
+        if normalize(item) in text_norm:
+            return item
+    return ""
+
 def init_excel():
-    """Инициализация Excel файла с гарантированным созданием листов"""
+    """Инициализация Excel файла с нужными листами"""
     try:
         if not EXCEL_FILE.exists():
-            logger.info("Создаю новый файл Excel с нужными листами...")
-            
-            # Создаем новую книгу
+            logger.info("Создаю новый файл Excel...")
             wb = openpyxl.Workbook()
             
-            # Удаляем лист по умолчанию (он называется 'Sheet')
+            # Удаляем лист по умолчанию
             if 'Sheet' in wb.sheetnames:
                 wb.remove(wb['Sheet'])
             
             # Создаем лист "Брак Склада"
             wb.create_sheet("Брак Склада")
-            sheet_warehouse = wb["Брак Склада"]
-            sheet_warehouse.append([
+            wb["Брак Склада"].append([
                 "Дата", "Автор", "Код продукта", "Маркетплейс",
                 "Описание проблемы", "Характеристика проблемы", "Текст сообщения"
             ])
             
             # Создаем лист "Производство"
             wb.create_sheet("Производство")
-            sheet_production = wb["Производство"]
-            sheet_production.append([
+            wb["Производство"].append([
                 "Дата", "Автор", "Код продукта", 
                 "Описание проблемы", "Текст сообщения"
             ])
@@ -132,62 +140,54 @@ def init_excel():
             wb.save(EXCEL_FILE)
             logger.info(f"Файл создан с листами: {wb.sheetnames}")
         else:
-            # Проверяем существующие листы
             wb = openpyxl.load_workbook(EXCEL_FILE)
             if "Брак Склада" not in wb.sheetnames:
-                logger.warning("Лист 'Брак Склада' отсутствует! Создаю...")
                 wb.create_sheet("Брак Склада")
                 wb["Брак Склада"].append([
                     "Дата", "Автор", "Код продукта", "Маркетплейс",
                     "Описание проблемы", "Характеристика проблемы", "Текст сообщения"
                 ])
-                wb.save(EXCEL_FILE)
             
             if "Производство" not in wb.sheetnames:
-                logger.warning("Лист 'Производство' отсутствует! Создаю...")
                 wb.create_sheet("Производство")
                 wb["Производство"].append([
                     "Дата", "Автор", "Код продукта", 
                     "Описание проблемы", "Текст сообщения"
                 ])
-                wb.save(EXCEL_FILE)
-                
-            logger.info(f"Существующие листы: {wb.sheetnames}")
+            
+            wb.save(EXCEL_FILE)
+            logger.info(f"Проверены листы: {wb.sheetnames}")
             
     except Exception as e:
-        logger.error(f"Критическая ошибка инициализации Excel: {e}")
+        logger.error(f"Ошибка инициализации Excel: {e}", exc_info=True)
         raise
-
 
 def write_to_excel(data, sheet_name):
     """Запись данных в Excel с блокировкой"""
     try:
         with FileLock(str(LOCK_FILE), timeout=5):
-            logger.info(f"Запись в лист '{sheet_name}'...")
-
             wb = openpyxl.load_workbook(EXCEL_FILE)
+            
             if sheet_name not in wb.sheetnames:
-                logger.error(f"Лист '{sheet_name}' не найден!")
+                logger.error(f"Лист '{sheet_name}' не существует!")
                 return False
-
+                
             sheet = wb[sheet_name]
             sheet.append(data)
             wb.save(EXCEL_FILE)
-            logger.info("Данные успешно записаны")
+            logger.info(f"Данные записаны в лист '{sheet_name}'")
             return True
-
+            
     except Timeout:
         logger.error("Файл заблокирован. Попробуйте позже.")
         return False
     except Exception as e:
-        logger.error(f"Ошибка записи: {str(e)}", exc_info=True)
+        logger.error(f"Ошибка записи: {e}", exc_info=True)
         return False
-
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
     """Обработчик входящих запросов"""
-    # Проверка токена
     if request.args.get("token") != WEBHOOK_TOKEN:
         logger.warning("Неверный токен доступа")
         return jsonify({"error": "Forbidden"}), 403
@@ -195,28 +195,25 @@ def webhook():
     try:
         data = request.get_json()
         if not data:
-            logger.error("Пустой JSON в запросе")
-            return jsonify({"error": "Invalid JSON"}), 400
-
+            logger.error("Пустой запрос")
+            return jsonify({"error": "No data provided"}), 400
+            
         text = str(data.get("content", "")).strip().lower()
         author = data.get("user_id", "Неизвестно")
         timestamp = data.get("created_at", datetime.now().isoformat())
 
-        # Парсинг даты
         try:
             time_str = datetime.fromisoformat(timestamp.replace("Z", "+00:00")).strftime("%Y-%m-%d")
         except ValueError:
             time_str = datetime.utcnow().strftime("%Y-%m-%d")
-            logger.warning(f"Неверный формат даты: {timestamp}. Использована текущая дата.")
+            logger.warning(f"Неверный формат даты, используется текущая: {time_str}")
 
         logger.info(f"Обработка запроса от {author}: {text}")
 
-        # Обработка сообщения для склада
         if text.startswith("#склад"):
-            content = text.replace("#склад", "", 1).strip()
-            product = find_match(content, PRODUCTS)
-            defect = find_match(content, WAREHOUSE_DEFECTS)
-            marketplace = find_match(content, MARKETPLACES)
+            product = find_match(text, PRODUCTS)
+            defect = find_match(text, WAREHOUSE_DEFECTS)
+            marketplace = find_match(text, MARKETPLACES)
 
             if not product or not defect:
                 logger.warning(f"Не найдены продукт или дефект: {text}")
@@ -234,11 +231,9 @@ def webhook():
 
             return jsonify({"success": success}), 200 if success else 500
 
-        # Обработка сообщения для производства
         elif text.startswith("#производство"):
-            content = text.replace("#производство", "", 1).strip()
-            product = find_match(content, PRODUCTS)
-            defect = find_match(content, PRODUCTION_DEFECTS)
+            product = find_match(text, PRODUCTS)
+            defect = find_match(text, PRODUCTION_DEFECTS)
 
             if not product or not defect:
                 logger.warning(f"Не найдены продукт или дефект: {text}")
@@ -258,20 +253,13 @@ def webhook():
         return jsonify({"error": "Unrecognized command"}), 400
 
     except Exception as e:
-        logger.error(f"Ошибка обработки запроса: {str(e)}", exc_info=True)
+        logger.error(f"Ошибка обработки запроса: {e}", exc_info=True)
         return jsonify({"error": "Internal Server Error"}), 500
 
-
 if __name__ == "__main__":
-    # Инициализация файла Excel
     try:
         init_excel()
+        logger.info(f"Сервер запущен на {BIND_HOST}:{PORT}")
+        app.run(host=BIND_HOST, port=PORT)
     except Exception as e:
-        logger.error(f"Не удалось инициализировать Excel: {e}")
-        exit(1)
-
-    # Запуск сервера
-    logger.info(f"Сервер запущен на {BIND_HOST}:{PORT}")
-    app.run(host=BIND_HOST, port=PORT)
-
-
+        logger.error(f"Не удалось запустить сервер: {e}")
