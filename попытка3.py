@@ -113,67 +113,88 @@ def find_match(text, collection):
     return ""
 
 def init_excel():
-    """Инициализация Excel файла с нужными листами"""
+    """Гарантированное создание файла с нужными листами"""
     try:
         if not EXCEL_FILE.exists():
-            logger.info("Создаю новый файл Excel...")
+            logger.info("Создание нового файла Excel...")
             wb = openpyxl.Workbook()
             
-            # Удаляем лист по умолчанию
+            # Удаляем лист по умолчанию (Sheet)
             if 'Sheet' in wb.sheetnames:
                 wb.remove(wb['Sheet'])
             
-            # Создаем лист "Брак Склада"
-            wb.create_sheet("Брак Склада")
-            wb["Брак Склада"].append([
-                "Дата", "Автор", "Код продукта", "Маркетплейс",
-                "Описание проблемы", "Характеристика проблемы", "Текст сообщения"
-            ])
-            
-            # Создаем лист "Производство"
-            wb.create_sheet("Производство")
-            wb["Производство"].append([
-                "Дата", "Автор", "Код продукта", 
-                "Описание проблемы", "Текст сообщения"
-            ])
-            
-            wb.save(EXCEL_FILE)
-            logger.info(f"Файл создан с листами: {wb.sheetnames}")
-        else:
-            wb = openpyxl.load_workbook(EXCEL_FILE)
-            if "Брак Склада" not in wb.sheetnames:
-                wb.create_sheet("Брак Склада")
-                wb["Брак Склада"].append([
+            # Создаем оба листа с заголовками
+            for sheet_name, headers in [
+                ("Брак Склада", [
                     "Дата", "Автор", "Код продукта", "Маркетплейс",
                     "Описание проблемы", "Характеристика проблемы", "Текст сообщения"
-                ])
-            
-            if "Производство" not in wb.sheetnames:
-                wb.create_sheet("Производство")
-                wb["Производство"].append([
-                    "Дата", "Автор", "Код продукта", 
+                ]),
+                ("Производство", [
+                    "Дата", "Автор", "Код продукта",
                     "Описание проблемы", "Текст сообщения"
                 ])
+            ]:
+                wb.create_sheet(sheet_name)
+                wb[sheet_name].append(headers)
             
             wb.save(EXCEL_FILE)
-            logger.info(f"Проверены листы: {wb.sheetnames}")
-            
+            logger.info(f"Файл создан. Листы: {wb.sheetnames}")
+            return True
+        
+        # Если файл существует - проверяем листы
+        wb = openpyxl.load_workbook(EXCEL_FILE)
+        sheets_to_create = {
+            "Брак Склада": [
+                "Дата", "Автор", "Код продукта", "Маркетплейс",
+                "Описание проблемы", "Характеристика проблемы", "Текст сообщения"
+            ],
+            "Производство": [
+                "Дата", "Автор", "Код продукта",
+                "Описание проблемы", "Текст сообщения"
+            ]
+        }
+        
+        for sheet_name, headers in sheets_to_create.items():
+            if sheet_name not in wb.sheetnames:
+                logger.warning(f"Создаю отсутствующий лист: {sheet_name}")
+                wb.create_sheet(sheet_name)
+                wb[sheet_name].append(headers)
+        
+        wb.save(EXCEL_FILE)
+        return True
+        
     except Exception as e:
-        logger.error(f"Ошибка инициализации Excel: {e}", exc_info=True)
-        raise
+        logger.error(f"Критическая ошибка инициализации Excel: {e}")
+        return False
 
 def write_to_excel(data, sheet_name):
-    """Запись данных в Excel с блокировкой"""
+    """Запись с автоматическим созданием листа при необходимости"""
     try:
         with FileLock(str(LOCK_FILE), timeout=5):
             wb = openpyxl.load_workbook(EXCEL_FILE)
             
+            # Если лист отсутствует - создаем
             if sheet_name not in wb.sheetnames:
-                logger.error(f"Лист '{sheet_name}' не существует!")
-                return False
+                logger.warning(f"Лист {sheet_name} отсутствует. Создаю...")
+                wb.create_sheet(sheet_name)
                 
-            sheet = wb[sheet_name]
-            sheet.append(data)
+                # Добавляем заголовки
+                headers = {
+                    "Брак Склада": [
+                        "Дата", "Автор", "Код продукта", "Маркетплейс",
+                        "Описание проблемы", "Характеристика проблемы", "Текст сообщения"
+                    ],
+                    "Производство": [
+                        "Дата", "Автор", "Код продукта",
+                        "Описание проблемы", "Текст сообщения"
+                    ]
+                }.get(sheet_name, [])
+                
+                if headers:
+                    wb[sheet_name].append(headers)
+            
+            # Записываем данные
+            wb[sheet_name].append(data)
             wb.save(EXCEL_FILE)
             logger.info(f"Данные записаны в лист '{sheet_name}'")
             return True
@@ -182,8 +203,21 @@ def write_to_excel(data, sheet_name):
         logger.error("Файл заблокирован. Попробуйте позже.")
         return False
     except Exception as e:
-        logger.error(f"Ошибка записи: {e}", exc_info=True)
+        logger.error(f"Ошибка записи: {str(e)}")
         return False
+
+
+def repair_excel_file():
+    """Пересоздает файл при проблемах"""
+    try:
+        if EXCEL_FILE.exists():
+            EXCEL_FILE.unlink()
+            logger.warning("Удален поврежденный файл Excel")
+        return init_excel()
+    except Exception as e:
+        logger.error(f"Ошибка восстановления файла: {e}")
+        return False
+
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
@@ -263,3 +297,4 @@ if __name__ == "__main__":
         app.run(host=BIND_HOST, port=PORT)
     except Exception as e:
         logger.error(f"Не удалось запустить сервер: {e}")
+
