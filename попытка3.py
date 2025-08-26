@@ -4,11 +4,50 @@ import logging
 from flask import Flask, request, jsonify
 import openpyxl
 from datetime import datetime
+from yadisk import YaDisk
+from io import BytesIO
 from filelock import FileLock, Timeout
 from pathlib import Path
 
 # --- Конфигурация ---
 app = Flask(__name__)
+
+
+YANDEX_TOKEN = "y0__xCQ9cDcAxi90zkg45msmxR8wLrHT6gVPSbMg75z711ZpdUfcQ"
+EXCEL_FILE_PATH = "/бот%20пачка/popitka5.xlsx"
+
+# Инициализация Яндекс.Диска
+yadisk = YaDisk(token=YANDEX_TOKEN)
+
+# Проверка подключения
+if not yadisk.check_token():
+    print("❌ Не удалось подключиться к Яндекс.Диску!")
+    print("Проверьте токен и интернет-соединение")
+    exit(1)
+
+# Остальной код (функции find_match, update_excel, webhook) 
+# остается таким же, как в предыдущем примере
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 try:
     # Автоматическое определение папки со скриптом
@@ -290,11 +329,38 @@ def webhook():
         logger.error(f"Ошибка обработки запроса: {e}", exc_info=True)
         return jsonify({"error": "Internal Server Error"}), 500
 
+
+
 if __name__ == "__main__":
+    print("Проверяем доступ к файлу...")
+    
     try:
-        init_excel()
-        logger.info(f"Сервер запущен на {BIND_HOST}:{PORT}")
-        app.run(host=BIND_HOST, port=PORT)
+        # Проверяем существование файла
+        if yadisk.exists(EXCEL_FILE_PATH):
+            print("Файл найден на Яндекс.Диске")
+        else:
+            print("Создаем новый файл...")
+            # Создаем новую книгу Excel
+            wb = openpyxl.Workbook()
+            # Удаляем лист по умолчанию
+            if 'Sheet' in wb.sheetnames:
+                wb.remove(wb['Sheet'])
+            
+            # Сохраняем в память и загружаем на диск
+            with BytesIO() as buffer:
+                wb.save(buffer)
+                buffer.seek(0)
+                yadisk.upload(buffer, EXCEL_FILE_PATH)
+            print("Файл успешно создан на Яндекс.Диске")
+            
     except Exception as e:
-        logger.error(f"Не удалось запустить сервер: {e}")
+        print(f"Ошибка: {e}")
+        print("Возможные причины:")
+        print("1. Неверный токен")
+        print("2. Нет прав на запись")
+        print("3. Неправильный путь к файлу")
+        exit(1)
+    
+    print("Сервер запускается...")
+    app.run(host="0.0.0.0", port=8000, debug=True)
 
