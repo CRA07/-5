@@ -237,9 +237,6 @@ def write_to_excel(data, sheet_name):
     except Timeout:
         logger.error("Файл заблокирован. Попробуйте позже.")
         return False
-    except Exception as e:
-        logger.error(f"Ошибка записи: {e}")
-        return False
 
 if __name__ == "__main__":
     print("Проверяем доступ к файлу...")
@@ -263,8 +260,7 @@ if __name__ == "__main__":
                 yadisk.upload(buffer, EXCEL_FILE_PATH)
             print("Файл успешно создан на Яндекс.Диске")
 
-    except Exception as e:
-        print(f"Ошибка: {e}")
+    except Exception:
         exit(1)
 
 
@@ -335,11 +331,11 @@ def webhook():
         logger.warning(f"Неизвестная команда: {text}")
         return jsonify({"error": "Unrecognized command"}), 400
 
-    except Exception as e:
-        logger.error(f"Ошибка обработки запроса: {e}", exc_info=True)
+    except Exception:
         return jsonify({"error": "Internal Server Error"}), 500
 
 
 app.run(host="0.0.0.0", port=8000, debug=True)
+
 
 
