@@ -28,11 +28,6 @@ if not yadisk.check_token():
     print("Проверь токен и интернет-соединение")
     exit(1)
 
-try:
-    # Проверяем/создаем лог-файл
-    if not LOG_FILE.exists():
-        LOG_FILE.touch()
-        print(f"Создан лог-файл: {LOG_FILE}")
 
 except Exception as e:
     print(f"Ошибка создания файлов: {e}")
@@ -346,3 +341,4 @@ def webhook():
 
 
 app.run(host="0.0.0.0", port=8000, debug=True)
+
