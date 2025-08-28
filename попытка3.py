@@ -29,10 +29,6 @@ if not yadisk.check_token():
     exit(1)
 
 
-except Exception as e:
-    print(f"Ошибка создания файлов: {e}")
-    exit()
-
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
@@ -336,6 +332,7 @@ def webhook():
 
 
 app.run(host="0.0.0.0", port=8000, debug=True)
+
 
 
 
