@@ -238,7 +238,7 @@ def write_to_excel(data, sheet_name):
         logger.error("Файл заблокирован. Попробуйте позже.")
         return False
     except Exception as e:
-        logger.error(f"Ошибка записи: {str(e)}")
+        logger.error(f"Ошибка записи: {e}")
         return False
 
 if __name__ == "__main__":
@@ -341,4 +341,5 @@ def webhook():
 
 
 app.run(host="0.0.0.0", port=8000, debug=True)
+
 
