@@ -13,7 +13,7 @@ from pathlib import Path
 app = Flask(__name__)
 
 YANDEX_TOKEN = "y0__xCQ9cDcAxi90zkg45msmxR8wLrHT6gVPSbMg75z711ZpdUfcQ"
-EXCEL_FILE_PATH = "/бот%20пачка/popitka5.xlsx"
+EXCEL_FILE_PATH = "/бот пачка/popitka5.xlsx"
 
 # Инициализация Яндекс.Диска
 yadisk = YaDisk(token=YANDEX_TOKEN)
@@ -471,3 +471,4 @@ if __name__ == "__main__":
 
     print("Сервер запускается...")
     app.run(host="0.0.0.0", port=8000, debug=True)
+
