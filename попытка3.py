@@ -14,6 +14,10 @@ app = Flask(__name__)
 
 YANDEX_TOKEN = "y0__xCQ9cDcAxi90zkg45msmxR8wLrHT6gVPSbMg75z711ZpdUfcQ"
 EXCEL_FILE_PATH = "/бот%20пачка/popitka5.xlsx"
+EXCEL_FILE = "popitka5.xlsx"
+
+LOCK_FILE = "popitka5.xlsx.lock"
+LOG_FILE = "webhook.log"
 
 # Инициализация Яндекс.Диска
 yadisk = YaDisk(token=YANDEX_TOKEN)
@@ -24,31 +28,11 @@ if not yadisk.check_token():
     print("Проверь токен и интернет-соединение")
     exit(1)
 
-
-PROJECT_DIR = Path(__file__).parent  # Папка, где лежит этот скрипт
-EXCEL_FILE = PROJECT_DIR / "popitka5.xlsx"
-LOCK_FILE = PROJECT_DIR / "popitka5.xlsx.lock"
-LOG_FILE = PROJECT_DIR / "webhook.log"
-
 try:
     # Проверяем/создаем лог-файл
     if not LOG_FILE.exists():
         LOG_FILE.touch()
         print(f"Создан лог-файл: {LOG_FILE}")
-
-    # Проверяем/создаем Excel-файл
-    if not EXCEL_FILE.exists():
-        import openpyxl
-
-        wb = openpyxl.Workbook()
-        wb.save(EXCEL_FILE)
-        print(f"Создан Excel-файл: {EXCEL_FILE}")
-
-    print("=" * 50)
-    print(f"Рабочая папка: {PROJECT_DIR}")
-    print(f"Excel файл: {EXCEL_FILE}")
-    print(f"Лог файл: {LOG_FILE}")
-    print("=" * 50)
 
 except Exception as e:
     print(f"Ошибка создания файлов: {e}")
@@ -229,74 +213,15 @@ MARKETPLACES = ["вб", "озон", "ям"]
 
 
 def normalize(text):
-    """Нормализация текста для поиска"""
     return re.sub(r'[\s_]+', '', text.lower())
 
 
 def find_match(text, collection):
-    """Поиск совпадения в коллекции"""
     text_norm = normalize(text)
     for item in collection:
         if normalize(item) in text_norm:
             return item
     return ""
-
-
-def init_excel():
-    """Гарантированное создание файла с нужными листами"""
-    try:
-        if not EXCEL_FILE.exists():
-            logger.info("Создание нового файла Excel...")
-            wb = openpyxl.Workbook()
-
-            # Удаляем лист по умолчанию (Sheet)
-            if 'Sheet' in wb.sheetnames:
-                wb.remove(wb['Sheet'])
-
-            # Создаем оба листа с заголовками
-            for sheet_name, headers in [
-                ("Брак Склада", [
-                    "Дата", "Автор", "Код продукта", "Маркетплейс",
-                    "Описание проблемы", "Характеристика проблемы", "Текст сообщения"
-                ]),
-                ("Производство", [
-                    "Дата", "Автор", "Код продукта",
-                    "Описание проблемы", "Текст сообщения"
-                ])
-            ]:
-                wb.create_sheet(sheet_name)
-                wb[sheet_name].append(headers)
-
-            wb.save(EXCEL_FILE)
-            logger.info(f"Файл создан. Листы: {wb.sheetnames}")
-            return True
-
-        # Если файл существует - проверяем листы
-        wb = openpyxl.load_workbook(EXCEL_FILE)
-        sheets_to_create = {
-            "Брак Склада": [
-                "Дата", "Автор", "Код продукта", "Маркетплейс",
-                "Описание проблемы", "Характеристика проблемы", "Текст сообщения"
-            ],
-            "Производство": [
-                "Дата", "Автор", "Код продукта",
-                "Описание проблемы", "Текст сообщения"
-            ]
-        }
-
-        for sheet_name, headers in sheets_to_create.items():
-            if sheet_name not in wb.sheetnames:
-                logger.warning(f"Создаю отсутствующий лист: {sheet_name}")
-                wb.create_sheet(sheet_name)
-                wb[sheet_name].append(headers)
-
-        wb.save(EXCEL_FILE)
-        return True
-
-    except Exception as e:
-        logger.error(f"Критическая ошибка инициализации Excel: {e}")
-        return False
-
 
 def write_to_excel(data, sheet_name):
     """Запись с автоматическим созданием листа при необходимости"""
@@ -307,23 +232,7 @@ def write_to_excel(data, sheet_name):
             # Если лист отсутствует - создаем
             if sheet_name not in wb.sheetnames:
                 logger.warning(f"Лист {sheet_name} отсутствует. Создаю...")
-                wb.create_sheet(sheet_name)
-
-                # Добавляем заголовки
-                headers = {
-                    "Брак Склада": [
-                        "Дата", "Автор", "Код продукта", "Маркетплейс",
-                        "Описание проблемы", "Характеристика проблемы", "Текст сообщения"
-                    ],
-                    "Производство": [
-                        "Дата", "Автор", "Код продукта",
-                        "Описание проблемы", "Текст сообщения"
-                    ]
-                }.get(sheet_name, [])
-
-                if headers:
-                    wb[sheet_name].append(headers)
-
+                
             # Записываем данные
             wb[sheet_name].append(data)
             wb.save(EXCEL_FILE)
@@ -434,7 +343,6 @@ def webhook():
     except Exception as e:
         logger.error(f"Ошибка обработки запроса: {e}", exc_info=True)
         return jsonify({"error": "Internal Server Error"}), 500
-    
 
-    print("Сервер запускается...")
-    app.run(host="0.0.0.0", port=8000, debug=True)
+
+app.run(host="0.0.0.0", port=8000, debug=True)
