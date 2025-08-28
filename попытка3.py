@@ -18,68 +18,10 @@ EXCEL_FILE_PATH = "/бот пачка/popitka5.xlsx"
 # Инициализация Яндекс.Диска
 yadisk = YaDisk(token=YANDEX_TOKEN)
 
-# Проверка подключения
-if not yadisk.check_token():
-    print("Не удалось подключиться к Яндекс.Диску")
-    print("Проверь токен и интернет-соединение")
-    exit(1)
-
-
-try:
-    # Автоматическое определение папки со скриптом
-    PROJECT_DIR = Path(__file__).parent
-
-    # Альтернативные варианты (раскомментируйте нужный):
-    # PROJECT_DIR = Path.home() / "Documents" / "Мой проект"  # Документы
-    # PROJECT_DIR = Path(r"C:\Project")  # Абсолютный путь
-
-    # Проверяем доступность папки
-    if not PROJECT_DIR.exists():
-        PROJECT_DIR.mkdir(parents=True, exist_ok=True)
-        print(f"Создана папка проекта: {PROJECT_DIR}")
-except Exception as e:
-    print(f"Ошибка определения пути: {e}")
-    exit()
-
-app = Flask(__name__)
-
-PROJECT_DIR = Path(__file__).parent  # Папка, где лежит этот скрипт
-EXCEL_FILE = PROJECT_DIR / "popitka5.xlsx"
-LOCK_FILE = PROJECT_DIR / "popitka5.xlsx.lock"
-LOG_FILE = PROJECT_DIR / "webhook.log"
-
-try:
-    # Проверяем/создаем лог-файл
-    if not LOG_FILE.exists():
-        LOG_FILE.touch()
-        print(f"Создан лог-файл: {LOG_FILE}")
-
-    # Проверяем/создаем Excel-файл
-    if not EXCEL_FILE.exists():
-        import openpyxl
-
-        wb = openpyxl.Workbook()
-        wb.save(EXCEL_FILE)
-        print(f"Создан Excel-файл: {EXCEL_FILE}")
-
-    print("=" * 50)
-    print(f"Рабочая папка: {PROJECT_DIR}")
-    print(f"Excel файл: {EXCEL_FILE}")
-    print(f"Лог файл: {LOG_FILE}")
-    print("=" * 50)
-
-except Exception as e:
-    print(f"Ошибка создания файлов: {e}")
-    exit()
-
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(LOG_FILE),
-        logging.StreamHandler()
-    ]
+    format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
@@ -249,7 +191,6 @@ def normalize(text):
     """Нормализация текста для поиска"""
     return re.sub(r'[\s_]+', '', text.lower())
 
-
 def find_match(text, collection):
     """Поиск совпадения в коллекции"""
     text_norm = normalize(text)
@@ -258,39 +199,34 @@ def find_match(text, collection):
             return item
     return ""
 
-
-def init_excel():
-    """Гарантированное создание файла с нужными листами"""
+def download_excel():
+    """Скачивает файл с Яндекс.Диска"""
     try:
-        if not EXCEL_FILE.exists():
-            logger.info("Создание нового файла Excel...")
-            wb = openpyxl.Workbook()
+        buffer = BytesIO()
+        yadisk.download(EXCEL_FILE_PATH, buffer)
+        buffer.seek(0)
+        return openpyxl.load_workbook(buffer)
+    except Exception as e:
+        logger.error(f"Ошибка скачивания файла: {e}")
+        return None
 
-            # Удаляем лист по умолчанию (Sheet)
-            if 'Sheet' in wb.sheetnames:
-                wb.remove(wb['Sheet'])
+def upload_excel(wb):
+    """Загружает файл на Яндекс.Диск"""
+    try:
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        yadisk.upload(buffer, EXCEL_FILE_PATH, overwrite=True)
+        return True
+    except Exception as e:
+        logger.error(f"Ошибка загрузки файла: {e}")
+        return False
 
-            # Создаем оба листа с заголовками
-            for sheet_name, headers in [
-                ("Брак Склада", [
-                    "Дата", "Автор", "Код продукта", "Маркетплейс",
-                    "Описание проблемы", "Характеристика проблемы", "Текст сообщения"
-                ]),
-                ("Производство", [
-                    "Дата", "Автор", "Код продукта",
-                    "Описание проблемы", "Текст сообщения"
-                ])
-            ]:
-                wb.create_sheet(sheet_name)
-                wb[sheet_name].append(headers)
-
-            wb.save(EXCEL_FILE)
-            logger.info(f"Файл создан. Листы: {wb.sheetnames}")
-            return True
-
-        # Если файл существует - проверяем листы
-        wb = openpyxl.load_workbook(EXCEL_FILE)
-        sheets_to_create = {
+def ensure_sheet_exists(wb, sheet_name):
+    """Проверяет и создает лист при необходимости"""
+    if sheet_name not in wb.sheetnames:
+        wb.create_sheet(sheet_name)
+        headers = {
             "Брак Склада": [
                 "Дата", "Автор", "Код продукта", "Маркетплейс",
                 "Описание проблемы", "Характеристика проблемы", "Текст сообщения"
@@ -299,73 +235,59 @@ def init_excel():
                 "Дата", "Автор", "Код продукта",
                 "Описание проблемы", "Текст сообщения"
             ]
-        }
-
-        for sheet_name, headers in sheets_to_create.items():
-            if sheet_name not in wb.sheetnames:
-                logger.warning(f"Создаю отсутствующий лист: {sheet_name}")
-                wb.create_sheet(sheet_name)
-                wb[sheet_name].append(headers)
-
-        wb.save(EXCEL_FILE)
+        }.get(sheet_name, [])
+        
+        if headers:
+            wb[sheet_name].append(headers)
         return True
-
-    except Exception as e:
-        logger.error(f"Критическая ошибка инициализации Excel: {e}")
-        return False
-
+    return False
 
 def write_to_excel(data, sheet_name):
-    """Запись с автоматическим созданием листа при необходимости"""
+    """Записывает данные в Excel на Яндекс.Диске"""
     try:
-        with FileLock(str(LOCK_FILE), timeout=5):
-            wb = openpyxl.load_workbook(EXCEL_FILE)
-
-            # Если лист отсутствует - создаем
-            if sheet_name not in wb.sheetnames:
-                logger.warning(f"Лист {sheet_name} отсутствует. Создаю...")
-                wb.create_sheet(sheet_name)
-
-                # Добавляем заголовки
-                headers = {
-                    "Брак Склада": [
-                        "Дата", "Автор", "Код продукта", "Маркетплейс",
-                        "Описание проблемы", "Характеристика проблемы", "Текст сообщения"
-                    ],
-                    "Производство": [
-                        "Дата", "Автор", "Код продукта",
-                        "Описание проблемы", "Текст сообщения"
-                    ]
-                }.get(sheet_name, [])
-
-                if headers:
-                    wb[sheet_name].append(headers)
-
-            # Записываем данные
-            wb[sheet_name].append(data)
-            wb.save(EXCEL_FILE)
+        # Скачиваем файл
+        wb = download_excel()
+        if not wb:
+            return False
+        
+        # Проверяем/создаем лист
+        ensure_sheet_exists(wb, sheet_name)
+        
+        # Добавляем данные
+        wb[sheet_name].append(data)
+        
+        # Загружаем обратно
+        success = upload_excel(wb)
+        if success:
             logger.info(f"Данные записаны в лист '{sheet_name}'")
-            return True
-
-    except Timeout:
-        logger.error("Файл заблокирован. Попробуйте позже.")
-        return False
+        return success
+        
     except Exception as e:
-        logger.error(f"Ошибка записи: {str(e)}")
+        logger.error(f"Ошибка записи: {e}")
         return False
 
-
-def repair_excel_file():
-    """Пересоздает файл при проблемах"""
+def init_excel():
+    """Инициализирует файл на Яндекс.Диске"""
     try:
-        if EXCEL_FILE.exists():
-            EXCEL_FILE.unlink()
-            logger.warning("Удален поврежденный файл Excel")
-        return init_excel()
+        if not yadisk.exists(EXCEL_FILE_PATH):
+            logger.info("Создаю новый файл на Яндекс.Диске...")
+            wb = openpyxl.Workbook()
+            
+            # Удаляем лист по умолчанию
+            if 'Sheet' in wb.sheetnames:
+                wb.remove(wb['Sheet'])
+            
+            # Создаем нужные листы
+            ensure_sheet_exists(wb, "Брак Склада")
+            ensure_sheet_exists(wb, "Производство")
+            
+            # Загружаем на диск
+            return upload_excel(wb)
+        return True
+        
     except Exception as e:
-        logger.error(f"Ошибка восстановления файла: {e}")
+        logger.error(f"Ошибка инициализации: {e}")
         return False
-
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
@@ -379,19 +301,16 @@ def webhook():
         if not data:
             logger.error("Пустой запрос")
             return jsonify({"error": "No data provided"}), 400
-
+            
         text = str(data.get("content", "")).strip().lower()
         author = data.get("user_id", "Неизвестно")
-        timestamp = data.get("created_at", datetime.now().isoformat())
-
-        try:
-            time_str = datetime.fromisoformat(timestamp.replace("Z", "+00:00")).strftime("%Y-%m-%d")
-        except ValueError:
-            time_str = datetime.utcnow().strftime("%Y-%m-%d")
-            logger.warning(f"Неверный формат даты, используется текущая: {time_str}")
-
+        
+        # Используем текущее время
+        time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
         logger.info(f"Обработка запроса от {author}: {text}")
 
+        # Обработка сообщения для склада
         if text.startswith("#склад"):
             product = find_match(text, PRODUCTS)
             defect = find_match(text, WAREHOUSE_DEFECTS)
@@ -413,6 +332,7 @@ def webhook():
 
             return jsonify({"success": success}), 200 if success else 500
 
+        # Обработка сообщения для производства
         elif text.startswith("#производство"):
             product = find_match(text, PRODUCTS)
             defect = find_match(text, PRODUCTION_DEFECTS)
@@ -435,40 +355,23 @@ def webhook():
         return jsonify({"error": "Unrecognized command"}), 400
 
     except Exception as e:
-        logger.error(f"Ошибка обработки запроса: {e}", exc_info=True)
+        logger.error(f"Ошибка обработки запроса: {e}")
         return jsonify({"error": "Internal Server Error"}), 500
 
-
 if __name__ == "__main__":
-    print("Проверяем доступ к файлу...")
-
-    try:
-        # Проверяем существование файла
-        if yadisk.exists(EXCEL_FILE_PATH):
-            print("Файл найден на Яндекс.Диске")
-        else:
-            print("Создаем новый файл...")
-            # Создаем новую книгу Excel
-            wb = openpyxl.Workbook()
-            # Удаляем лист по умолчанию
-            if 'Sheet' in wb.sheetnames:
-                wb.remove(wb['Sheet'])
-
-            # Сохраняем в память и загружаем на диск
-            with BytesIO() as buffer:
-                wb.save(buffer)
-                buffer.seek(0)
-                yadisk.upload(buffer, EXCEL_FILE_PATH)
-            print("Файл успешно создан на Яндекс.Диске")
-
-    except Exception as e:
-        print(f"Ошибка: {e}")
-        print("Возможные причины:")
-        print("1. Неверный токен")
-        print("2. Нет прав на запись")
-        print("3. Неправильный путь к файлу")
+    # Проверка подключения к Яндекс.Диску
+    if not yadisk.check_token():
+        logger.error("Не удалось подключиться к Яндекс.Диску!")
+        logger.error("Проверьте токен и интернет-соединение")
         exit(1)
-
-    print("Сервер запускается...")
-    app.run(host="0.0.0.0", port=8000, debug=True)
-
+    
+    # Инициализация файла
+    if init_excel():
+        logger.info("Файл на Яндекс.Диске готов к работе")
+    else:
+        logger.error("Не удалось инициализировать файл")
+        exit(1)
+    
+    # Запуск сервера
+    logger.info(f"Сервер запущен на {BIND_HOST}:{PORT}")
+    app.run(host=BIND_HOST, port=PORT)
