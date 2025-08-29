@@ -197,6 +197,10 @@ PRODUCTION_DEFECTS = ["нет даты производства ", "волос �
 
 MARKETPLACES = ["вб", "озон", "ям"]
 
+import datetime
+print("Текущее время сервера:", datetime.datetime.now())
+
+
 def init_google_sheets():
     """Инициализация подключения к Google Sheets"""
     try:
@@ -396,5 +400,6 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
