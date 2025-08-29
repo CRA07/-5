@@ -9,6 +9,7 @@ from yadisk import YaDisk
 from io import BytesIO
 from filelock import FileLock, Timeout
 from pathlib import Path
+import tempfile
 
 app = Flask(__name__)
 
@@ -202,20 +203,25 @@ def find_match(text, collection):
 def download_excel():
     """Скачивает файл с Яндекс.Диска"""
     try:
+        # Создаем временный файл
         buffer = BytesIO()
         yadisk.download(EXCEL_FILE_PATH, buffer)
         buffer.seek(0)
         return openpyxl.load_workbook(buffer)
     except Exception as e:
         logger.error(f"Ошибка скачивания файла: {e}")
-        return None
+        # Создаем новую книгу если файл не существует
+        return openpyxl.Workbook()
 
 def upload_excel(wb):
     """Загружает файл на Яндекс.Диск"""
     try:
+        # Сохраняем во временный буфер
         buffer = BytesIO()
         wb.save(buffer)
         buffer.seek(0)
+        
+        # Загружаем на Яндекс.Диск
         yadisk.upload(buffer, EXCEL_FILE_PATH, overwrite=True)
         return True
     except Exception as e:
@@ -225,20 +231,16 @@ def upload_excel(wb):
 def ensure_sheet_exists(wb, sheet_name):
     """Проверяет и создает лист при необходимости"""
     if sheet_name not in wb.sheetnames:
-        wb.create_sheet(sheet_name)
-        headers = {
-            "Брак Склада": [
-                "Дата", "Автор", "Код продукта", "Маркетплейс",
-                "Описание проблемы", "Характеристика проблемы", "Текст сообщения"
-            ],
-            "Производство": [
-                "Дата", "Автор", "Код продукта",
-                "Описание проблемы", "Текст сообщения"
-            ]
-        }.get(sheet_name, [])
+        ws = wb.create_sheet(sheet_name)
         
-        if headers:
-            wb[sheet_name].append(headers)
+        # Заголовки для разных листов
+        if sheet_name == "Брак Склада":
+            ws.append(["Дата", "Автор", "Код продукта", "Маркетплейс", 
+                      "Описание проблемы", "Характеристика проблемы", "Текст сообщения"])
+        elif sheet_name == "Производство":
+            ws.append(["Дата", "Автор", "Код продукта", 
+                      "Описание проблемы", "Текст сообщения"])
+        
         return True
     return False
 
@@ -247,8 +249,6 @@ def write_to_excel(data, sheet_name):
     try:
         # Скачиваем файл
         wb = download_excel()
-        if not wb:
-            return False
         
         # Проверяем/создаем лист
         ensure_sheet_exists(wb, sheet_name)
@@ -269,6 +269,7 @@ def write_to_excel(data, sheet_name):
 def init_excel():
     """Инициализирует файл на Яндекс.Диске"""
     try:
+        # Проверяем существует ли файл
         if not yadisk.exists(EXCEL_FILE_PATH):
             logger.info("Создаю новый файл на Яндекс.Диске...")
             wb = openpyxl.Workbook()
@@ -360,9 +361,13 @@ def webhook():
 
 if __name__ == "__main__":
     # Проверка подключения к Яндекс.Диску
-    if not yadisk.check_token():
-        logger.error("Не удалось подключиться к Яндекс.Диску!")
-        logger.error("Проверьте токен и интернет-соединение")
+    try:
+        if not yadisk.check_token():
+            logger.error("Не удалось подключиться к Яндекс.Диску!")
+            logger.error("Проверьте токен и интернет-соединение")
+            exit(1)
+    except Exception as e:
+        logger.error(f"Ошибка проверки токена: {e}")
         exit(1)
     
     # Инициализация файла
