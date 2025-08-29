@@ -2,6 +2,7 @@ import os
 import re
 from flask import Flask, request, jsonify
 from datetime import datetime
+import logging
 import gspread
 from google.oauth2.service_account import Credentials
 from threading import Lock
@@ -12,7 +13,6 @@ app = Flask(__name__)
 # Настройка Google Sheets
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 SERVICE_ACCOUNT_FILE = 'brakpoduction-1f2f11b00d89.json'  # Ваш JSON файл
-import logging
 SPREADSHEET_ID = '1MfkqIFbwfWeFB6hro09ulnJ1No9SIyd879VrzkBGfzc'  # Из URL: https://docs.google.com/spreadsheets/d/ВАШ_ID/
 
 # Названия листов
@@ -397,6 +397,7 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
 
