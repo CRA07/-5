@@ -5,6 +5,29 @@ from datetime import datetime
 import gspread
 from google.oauth2.service_account import Credentials
 from threading import Lock
+import subprocess
+import time
+
+def sync_render_time():
+    """Пытается синхронизировать время на Render"""
+    try:
+        # Render использует Alpine-based контейнеры
+        result = subprocess.run([
+            'apk', 'add', '--no-cache', 'tzdata'
+        ], capture_output=True, text=True, timeout=30)
+        
+        # Устанавливаем правильный часовой пояс
+        subprocess.run([
+            'ln', '-sf', '/usr/share/zoneinfo/UTC', '/etc/localtime'
+        ], capture_output=True)
+        
+        logging.info("Часовой пояс установлен на UTC")
+        return True
+        
+    except Exception as e:
+        logging.warning(f"Не удалось установить часовой пояс: {e}")
+        return False
+
 
 app = Flask(__name__)
 
@@ -395,3 +418,4 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
