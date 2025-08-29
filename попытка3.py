@@ -2,27 +2,29 @@ import os
 import re
 import logging
 from flask import Flask, request, jsonify
-import openpyxl
 from datetime import datetime
 import requests
-from yadisk import YaDisk
-from io import BytesIO
-from filelock import FileLock, Timeout
-from pathlib import Path
-import tempfile
+from threading import Lock
+import json
 
 app = Flask(__name__)
 
-YANDEX_TOKEN = "y0__xCQ9cDcAxi90zkg_fnznhQIGRmrie8_mTa5-r-TlmD8w6F7Qg"
-EXCEL_FILE_PATH = "/бот пачка/popitka5.xlsx"
+API_KEY = "AIzaSyDJbjZGGVS_xAJhCfA_Oeu9j7ZS0GhlzB4"  # Из Google Cloud Console
+SPREADSHEET_ID = "1MfkqIFbwfWeFB6hro09ulnJ1No9SIyd879VrzkBGfzc"  # Из URL Google Sheets
 
-# Инициализация Яндекс.Диска
-yadisk = YaDisk(token=YANDEX_TOKEN)
+SHEET_NAMES = {
+    'warehouse': 'Брак Склада',
+    'production': 'Производство'
+}
 
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('bot.log')
+    ]
 )
 logger = logging.getLogger(__name__)
 
@@ -31,7 +33,9 @@ WEBHOOK_TOKEN = "token20220705"
 PORT = 8000
 BIND_HOST = "0.0.0.0"
 
-# Списки данных (сокращенные для примера)
+# Блокировка для thread safety
+lock = Lock()
+
 PRODUCTS = ["STZ_Agenta_Aжента_100", "PML_PML_Завтрак_200", "PML_PML_Хлорофил_500", "KSM_kosmoteros_СывВитКомп_30",
             "KSM_Kosmoteros_ТоникНорм_200", "KSM_Kosmoteros_ТоникСухая_200", "KSM_Kosmoteros_ТоникЖирная_200",
             "KSM_kosmoteros_ТоникВитС_200", "KSM_ГельПенкаМат_150", "KSM_ГельПенкаBG_150",
@@ -162,6 +166,8 @@ PRODUCTS = ["STZ_Agenta_Aжента_100", "PML_PML_Завтрак_200", "PML_PML
             "GRT_HealthIs_Карнитин_90", "GRT_Handy_МассажноеМаслоДляТела_500", "GRT_HealthIs_Кальций_1000_120",
             "GRT_Kottur_СПФДляЛица_50", "GRT_HealthIs_Коллаген_180", "GRT_HealthIs_Аргинин_180",
             "GRT_HealthIs_Аргинин_90", ]
+
+
 WAREHOUSE_DEFECTS = ["пришел другой дозатор", "нет этикетки", "нет дозатора",
                      "нет товара", "пришел разбитым", "перепутан штрихкод", "перепутан товар",
                      "брак", "проблема с этикеткой", "просрочка", "нет упаковки"]
@@ -188,9 +194,108 @@ PRODUCTION_DEFECTS = ["нет даты производства ", "волос �
 MARKETPLACES = ["вб", "озон", "ям"]
 
 
+def ensure_sheets_exist():
+    """Проверяет и создает необходимые листы через API"""
+    try:
+        # Проверяем существование листов
+        url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}?key={API_KEY}"
+        response = requests.get(url)
+
+        if response.status_code != 200:
+            logger.error(f"Ошибка доступа к таблице: {response.status_code}")
+            return False
+
+        existing_sheets = [sheet['properties']['title'] for sheet in response.json().get('sheets', [])]
+
+        # Создаем листы если их нет
+        batch_update_url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}:batchUpdate?key={API_KEY}"
+
+        requests_to_add = []
+
+        if SHEET_NAMES['warehouse'] not in existing_sheets:
+            requests_to_add.append({
+                "addSheet": {
+                    "properties": {
+                        "title": SHEET_NAMES['warehouse']
+                    }
+                }
+            })
+            # Добавляем заголовки для склада
+            write_to_google_sheets([
+                "Дата", "Автор", "Код продукта", "Маркетплейс",
+                "Описание проблемы", "Характеристика проблемы", "Текст сообщения"
+            ], "warehouse")
+
+        if SHEET_NAMES['production'] not in existing_sheets:
+            requests_to_add.append({
+                "addSheet": {
+                    "properties": {
+                        "title": SHEET_NAMES['production']
+                    }
+                }
+            })
+            # Добавляем заголовки для производства
+            write_to_google_sheets([
+                "Дата", "Автор", "Код продукта",
+                "Описание проблемы", "Текст сообщения"
+            ], "production")
+
+        if requests_to_add:
+            batch_data = {"requests": requests_to_add}
+            response = requests.post(batch_update_url, json=batch_data)
+            if response.status_code == 200:
+                logger.info("Листы успешно созданы")
+            else:
+                logger.error(f"Ошибка создания листов: {response.status_code}")
+
+        return True
+
+    except Exception as e:
+        logger.error(f"Ошибка проверки листов: {e}")
+        return False
+
+
+def write_to_google_sheets(data, sheet_type):
+    """Записывает данные в Google Sheets через REST API"""
+    try:
+        with lock:
+            sheet_name = SHEET_NAMES[sheet_type]
+
+            # URL для добавления данных
+            url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}/values/{sheet_name}!A:Z:append"
+
+            params = {
+                'valueInputOption': 'USER_ENTERED',
+                'key': API_KEY
+            }
+
+            body = {
+                "values": [data]
+            }
+
+            response = requests.post(
+                url,
+                params=params,
+                json=body,
+                headers={'Content-Type': 'application/json'}
+            )
+
+            if response.status_code == 200:
+                logger.info(f"Данные записаны в {sheet_name}: {data[:3]}...")
+                return True
+            else:
+                logger.error(f"Ошибка записи: {response.status_code} - {response.text}")
+                return False
+
+    except Exception as e:
+        logger.error(f"Исключение при записи: {e}")
+        return False
+
+
 def normalize(text):
     """Нормализация текста для поиска"""
     return re.sub(r'[\s_]+', '', text.lower())
+
 
 def find_match(text, collection):
     """Поиск совпадения в коллекции"""
@@ -200,95 +305,6 @@ def find_match(text, collection):
             return item
     return ""
 
-def download_excel():
-    """Скачивает файл с Яндекс.Диска"""
-    try:
-        # Создаем временный файл
-        buffer = BytesIO()
-        yadisk.download(EXCEL_FILE_PATH, buffer)
-        buffer.seek(0)
-        return openpyxl.load_workbook(buffer)
-    except Exception as e:
-        logger.error(f"Ошибка скачивания файла: {e}")
-        # Создаем новую книгу если файл не существует
-        return openpyxl.Workbook()
-
-def upload_excel(wb):
-    """Загружает файл на Яндекс.Диск"""
-    try:
-        # Сохраняем во временный буфер
-        buffer = BytesIO()
-        wb.save(buffer)
-        buffer.seek(0)
-        
-        # Загружаем на Яндекс.Диск
-        yadisk.upload(buffer, EXCEL_FILE_PATH, overwrite=True)
-        return True
-    except Exception as e:
-        logger.error(f"Ошибка загрузки файла: {e}")
-        return False
-
-def ensure_sheet_exists(wb, sheet_name):
-    """Проверяет и создает лист при необходимости"""
-    if sheet_name not in wb.sheetnames:
-        ws = wb.create_sheet(sheet_name)
-        
-        # Заголовки для разных листов
-        if sheet_name == "Брак Склада":
-            ws.append(["Дата", "Автор", "Код продукта", "Маркетплейс", 
-                      "Описание проблемы", "Характеристика проблемы", "Текст сообщения"])
-        elif sheet_name == "Производство":
-            ws.append(["Дата", "Автор", "Код продукта", 
-                      "Описание проблемы", "Текст сообщения"])
-        
-        return True
-    return False
-
-def write_to_excel(data, sheet_name):
-    """Записывает данные в Excel на Яндекс.Диске"""
-    try:
-        # Скачиваем файл
-        wb = download_excel()
-        
-        # Проверяем/создаем лист
-        ensure_sheet_exists(wb, sheet_name)
-        
-        # Добавляем данные
-        wb[sheet_name].append(data)
-        
-        # Загружаем обратно
-        success = upload_excel(wb)
-        if success:
-            logger.info(f"Данные записаны в лист '{sheet_name}'")
-        return success
-        
-    except Exception as e:
-        logger.error(f"Ошибка записи: {e}")
-        return False
-
-def init_excel():
-    """Инициализирует файл на Яндекс.Диске"""
-    try:
-        # Проверяем существует ли файл
-        if not yadisk.exists(EXCEL_FILE_PATH):
-            logger.info("Создаю новый файл на Яндекс.Диске...")
-            wb = openpyxl.Workbook()
-            
-            # Удаляем лист по умолчанию
-            if 'Sheet' in wb.sheetnames:
-                wb.remove(wb['Sheet'])
-            
-            # Создаем нужные листы
-            ensure_sheet_exists(wb, "Брак Склада")
-            ensure_sheet_exists(wb, "Производство")
-            
-            # Загружаем на диск
-            return upload_excel(wb)
-        return True
-        
-    except Exception as e:
-        logger.error(f"Ошибка инициализации: {e}")
-        return False
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
@@ -302,13 +318,11 @@ def webhook():
         if not data:
             logger.error("Пустой запрос")
             return jsonify({"error": "No data provided"}), 400
-            
+
         text = str(data.get("content", "")).strip().lower()
         author = data.get("user_id", "Неизвестно")
-        
-        # Используем текущее время
+
         time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
         logger.info(f"Обработка запроса от {author}: {text}")
 
         # Обработка сообщения для склада
@@ -321,7 +335,7 @@ def webhook():
                 logger.warning(f"Не найдены продукт или дефект: {text}")
                 return jsonify({"error": "Product or defect not found"}), 400
 
-            success = write_to_excel([
+            success = write_to_google_sheets([
                 time_str,
                 author,
                 product,
@@ -329,7 +343,7 @@ def webhook():
                 defect,
                 DEFECT_CATEGORIES.get(defect, ""),
                 text
-            ], "Брак Склада")
+            ], "warehouse")
 
             return jsonify({"success": success}), 200 if success else 500
 
@@ -342,13 +356,13 @@ def webhook():
                 logger.warning(f"Не найдены продукт или дефект: {text}")
                 return jsonify({"error": "Product or defect not found"}), 400
 
-            success = write_to_excel([
+            success = write_to_google_sheets([
                 time_str,
                 author,
                 product,
                 defect,
                 text
-            ], "Производство")
+            ], "production")
 
             return jsonify({"success": success}), 200 if success else 500
 
@@ -359,25 +373,37 @@ def webhook():
         logger.error(f"Ошибка обработки запроса: {e}")
         return jsonify({"error": "Internal Server Error"}), 500
 
-if __name__ == "__main__":
-    # Проверка подключения к Яндекс.Диску
-    try:
-        if not yadisk.check_token():
-            logger.error("Не удалось подключиться к Яндекс.Диску!")
-            logger.error("Проверьте токен и интернет-соединение")
-            exit(1)
-    except Exception as e:
-        logger.error(f"Ошибка проверки токена: {e}")
-        exit(1)
-    
-    # Инициализация файла
-    if init_excel():
-        logger.info("Файл на Яндекс.Диске готов к работе")
-    else:
-        logger.error("Не удалось инициализировать файл")
-        exit(1)
-    
-    # Запуск сервера
-    logger.info(f"Сервер запущен на {BIND_HOST}:{PORT}")
-    app.run(host=BIND_HOST, port=PORT)
 
+@app.route("/health", methods=["GET"])
+def health_check():
+    """Проверка работоспособности"""
+    try:
+        url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}?key={API_KEY}"
+        response = requests.get(url)
+
+        if response.status_code == 200:
+            return jsonify({"status": "healthy", "sheets_connected": True})
+        else:
+            return jsonify({"status": "unhealthy", "sheets_connected": False}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+if __name__ == "__main__":
+    # Проверяем подключение при запуске
+    logger.info("Запуск сервера...")
+
+    # Проверяем доступ к таблице
+    url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}?key={API_KEY}"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        logger.info("Успешное подключение к Google Sheets")
+        ensure_sheets_exist()
+    else:
+        logger.error(f"Не удалось подключиться к Google Sheets: {response.status_code}")
+
+    logger.info(f"Сервер запущен на {BIND_HOST}:{PORT}")
+    logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
+
+    app.run(host=BIND_HOST, port=PORT, debug=True)
