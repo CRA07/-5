@@ -1,17 +1,20 @@
 import os
 import re
-import logging
 from flask import Flask, request, jsonify
 from datetime import datetime
-import requests
+import gspread
+from google.oauth2.service_account import Credentials
 from threading import Lock
-import json
 
 app = Flask(__name__)
 
-API_KEY = "AIzaSyDJbjZGGVS_xAJhCfA_Oeu9j7ZS0GhlzB4"  # Из Google Cloud Console
-SPREADSHEET_ID = "1MfkqIFbwfWeFB6hro09ulnJ1No9SIyd879VrzkBGfzc"  # Из URL Google Sheets
+# Настройка Google Sheets
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+SERVICE_ACCOUNT_FILE = 'brakpoduction-1f2f11b00d89.json'  # Ваш JSON файл
+import logging
+SPREADSHEET_ID = '1MfkqIFbwfWeFB6hro09ulnJ1No9SIyd879VrzkBGfzc'  # Из URL: https://docs.google.com/spreadsheets/d/ВАШ_ID/
 
+# Названия листов
 SHEET_NAMES = {
     'warehouse': 'Брак Склада',
     'production': 'Производство'
@@ -193,102 +196,86 @@ PRODUCTION_DEFECTS = ["нет даты производства ", "волос �
 
 MARKETPLACES = ["вб", "озон", "ям"]
 
-
-def ensure_sheets_exist():
-    """Проверяет и создает необходимые листы через API"""
+def init_google_sheets():
+    """Инициализация подключения к Google Sheets"""
     try:
-        # Проверяем существование листов
-        url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}?key={API_KEY}"
-        response = requests.get(url)
+        # Авторизация через service account
+        creds = Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_FILE,
+            scopes=SCOPES
+        )
 
-        if response.status_code != 200:
-            logger.error(f"Ошибка доступа к таблице: {response.status_code}")
-            return False
+        client = gspread.authorize(creds)
+        spreadsheet = client.open_by_key(SPREADSHEET_ID)
 
-        existing_sheets = [sheet['properties']['title'] for sheet in response.json().get('sheets', [])]
+        logger.info("Успешное подключение к Google Sheets")
+        return spreadsheet
 
-        # Создаем листы если их нет
-        batch_update_url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}:batchUpdate?key={API_KEY}"
+    except Exception as e:
+        logger.error(f"Ошибка подключения к Google Sheets: {e}")
+        return None
 
-        requests_to_add = []
 
+def ensure_sheets_exist(spreadsheet):
+    """Проверяет и создает необходимые листы"""
+    try:
+        existing_sheets = [sheet.title for sheet in spreadsheet.worksheets()]
+
+        # Создаем лист для склада если его нет
         if SHEET_NAMES['warehouse'] not in existing_sheets:
-            requests_to_add.append({
-                "addSheet": {
-                    "properties": {
-                        "title": SHEET_NAMES['warehouse']
-                    }
-                }
-            })
-            # Добавляем заголовки для склада
-            write_to_google_sheets([
+            warehouse_sheet = spreadsheet.add_worksheet(
+                title=SHEET_NAMES['warehouse'],
+                rows=1000,
+                cols=10
+            )
+            warehouse_sheet.append_row([
                 "Дата", "Автор", "Код продукта", "Маркетплейс",
                 "Описание проблемы", "Характеристика проблемы", "Текст сообщения"
-            ], "warehouse")
+            ])
+            logger.info(f"Создан лист: {SHEET_NAMES['warehouse']}")
 
+        # Создаем лист для производства если его нет
         if SHEET_NAMES['production'] not in existing_sheets:
-            requests_to_add.append({
-                "addSheet": {
-                    "properties": {
-                        "title": SHEET_NAMES['production']
-                    }
-                }
-            })
-            # Добавляем заголовки для производства
-            write_to_google_sheets([
+            production_sheet = spreadsheet.add_worksheet(
+                title=SHEET_NAMES['production'],
+                rows=1000,
+                cols=10
+            )
+            production_sheet.append_row([
                 "Дата", "Автор", "Код продукта",
                 "Описание проблемы", "Текст сообщения"
-            ], "production")
-
-        if requests_to_add:
-            batch_data = {"requests": requests_to_add}
-            response = requests.post(batch_update_url, json=batch_data)
-            if response.status_code == 200:
-                logger.info("Листы успешно созданы")
-            else:
-                logger.error(f"Ошибка создания листов: {response.status_code}")
+            ])
+            logger.info(f"Создан лист: {SHEET_NAMES['production']}")
 
         return True
 
     except Exception as e:
-        logger.error(f"Ошибка проверки листов: {e}")
+        logger.error(f"Ошибка создания листов: {e}")
         return False
 
 
 def write_to_google_sheets(data, sheet_type):
-    """Записывает данные в Google Sheets через REST API"""
+    """Записывает данные в Google Sheets"""
     try:
         with lock:
-            sheet_name = SHEET_NAMES[sheet_type]
-
-            # URL для добавления данных
-            url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}/values/{sheet_name}!A:Z:append"
-
-            params = {
-                'valueInputOption': 'USER_ENTERED',
-                'key': API_KEY
-            }
-
-            body = {
-                "values": [data]
-            }
-
-            response = requests.post(
-                url,
-                params=params,
-                json=body,
-                headers={'Content-Type': 'application/json'}
-            )
-
-            if response.status_code == 200:
-                logger.info(f"Данные записаны в {sheet_name}: {data[:3]}...")
-                return True
-            else:
-                logger.error(f"Ошибка записи: {response.status_code} - {response.text}")
+            spreadsheet = init_google_sheets()
+            if not spreadsheet:
                 return False
 
+            # Проверяем и создаем листы если нужно
+            ensure_sheets_exist(spreadsheet)
+
+            sheet_name = SHEET_NAMES[sheet_type]
+            worksheet = spreadsheet.worksheet(sheet_name)
+
+            # Добавляем новую строку
+            worksheet.append_row(data)
+
+            logger.info(f"Данные записаны в {sheet_name}")
+            return True
+
     except Exception as e:
-        logger.error(f"Исключение при записи: {e}")
+        logger.error(f"Ошибка записи в Google Sheets: {e}")
         return False
 
 
@@ -378,10 +365,8 @@ def webhook():
 def health_check():
     """Проверка работоспособности"""
     try:
-        url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}?key={API_KEY}"
-        response = requests.get(url)
-
-        if response.status_code == 200:
+        spreadsheet = init_google_sheets()
+        if spreadsheet:
             return jsonify({"status": "healthy", "sheets_connected": True})
         else:
             return jsonify({"status": "unhealthy", "sheets_connected": False}), 500
@@ -390,18 +375,21 @@ def health_check():
 
 
 if __name__ == "__main__":
+    # Установите зависимости
+    logger.info("Установите зависимости: pip install flask gspread google-auth")
+
     # Проверяем подключение при запуске
     logger.info("Запуск сервера...")
 
-    # Проверяем доступ к таблице
-    url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}?key={API_KEY}"
-    response = requests.get(url)
-
-    if response.status_code == 200:
+    spreadsheet = init_google_sheets()
+    if spreadsheet:
         logger.info("Успешное подключение к Google Sheets")
-        ensure_sheets_exist()
+        ensure_sheets_exist(spreadsheet)
     else:
-        logger.error(f"Не удалось подключиться к Google Sheets: {response.status_code}")
+        logger.error("Не удалось подключиться к Google Sheets")
+        logger.error("1. Проверьте наличие файла service-account.json")
+        logger.error("2. Проверьте ID таблицы")
+        logger.error("3. Дайте доступ к таблице для service account")
 
     logger.info(f"Сервер запущен на {BIND_HOST}:{PORT}")
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
