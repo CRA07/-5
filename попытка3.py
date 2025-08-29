@@ -13,7 +13,7 @@ import tempfile
 
 app = Flask(__name__)
 
-YANDEX_TOKEN = "y0__xCQ9cDcAxi90zkg45msmxR8wLrHT6gVPSbMg75z711ZpdUfcQ"
+YANDEX_TOKEN = "y0__xCQ9cDcAxi90zkg_fnznhQIGRmrie8_mTa5-r-TlmD8w6F7Qg"
 EXCEL_FILE_PATH = "/бот пачка/popitka5.xlsx"
 
 # Инициализация Яндекс.Диска
@@ -380,3 +380,4 @@ if __name__ == "__main__":
     # Запуск сервера
     logger.info(f"Сервер запущен на {BIND_HOST}:{PORT}")
     app.run(host=BIND_HOST, port=PORT)
+
