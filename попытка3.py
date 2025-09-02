@@ -12,8 +12,8 @@ app = Flask(__name__)
 
 # Настройка Google Sheets
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-SERVICE_ACCOUNT_FILE = 'brakpoduction-1f2f11b00d89.json'  # Ваш JSON файл
-SPREADSHEET_ID = '1MfkqIFbwfWeFB6hro09ulnJ1No9SIyd879VrzkBGfzc'  # Из URL: https://docs.google.com/spreadsheets/d/ВАШ_ID/
+SERVICE_ACCOUNT_FILE = 'brakpoduction55-84893ca2af64.json'  # JSON файл
+SPREADSHEET_ID = '1-7tesS_fvz_Kk9ZkWCPsZfT5uyBu3hgwbImqMylFbeI'  # Из URL: https://docs.google.com/spreadsheets/d/ВАШ_ID/
 
 # Названия листов
 SHEET_NAMES = {
@@ -397,6 +397,7 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
 
