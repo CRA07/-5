@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "brakpoduction55",
+  "private_key_id": "84893ca2af642b4fdb770a56d230c5697d212c8d",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCYFWqzC2IBPI1T\n5LZOCiuR28KjA8b3xOkmYDk/3kUSjDHzR2zIhvJ1EuYmL+j2VjPnFgWKXTPOhgp5\nZT8en2VU4wEImWR5yiadubzZ0/vDy10tsAqf/8Z2nC3fQLpGFlUH5rI6FD5FFAyE\nYEXn39TT18AvwJeXPVBU2Wb3ycVffWOccQSRwHRPWLEO/AJxIsefynRD8f11B0Js\nb8tjEJQAVlry8drDSzLoPpjGdMKkvmGTYLXB2x6skO+c1gF/tUA5MSRyqgFWg4DK\n09hBtWr9hTZOnYck0PtENA+9y9fw06xTPbRZm2w542mCPw4PBacrQERtzr7omKiE\nqpk2kBjFAgMBAAECggEAP7iBe0EisAfx4xup8qq6NKPSOkED5Z5AXc7lTchQQoQx\nDZB4mNBJ2BmyCn/6aPQXTRRh/+YrJbXtv41XU/pPF7EBJtw2R/0WDvHamZ4DF7cm\ndFUVLpKZUesAIVFaerEysVvMgx8mNAVBdVltEMkswBHeuWNFYJ3VAagRR3Ln2qjm\nWc7T9MBxQuVqpThboEkf+mb3jiIC7B+c7/HXoUPdlphVx6+UqzsShAjIiVDGjOzw\nUYxUJqIUKl/QP/qPA5gJV0zQCSvhdNjqtXgliDZryTjOLtZHFk80ggE0l/P+TCRM\nOQBT5w572DDjjCn7VocKReD1VDuMk9tArb98jKzMZQKBgQDMEKQttkPRn6d7hSP4\nJm5yyLiqyoxusewuP/xgNKulE0qUM7aV346biJCoyJI7slnF/bZjcvICkMfHYGQK\nejST0njTKIa+6wv5itWWbLxvIh/PEtl6Yv+V1VdKDqYI0yNcT0q9UpgPCPRzrcaz\nFfLe8hyif+TcbKfOooX0oBd5zwKBgQC+yg6y98AdfE6RHLymk5DfpSxgZzYrG4Ba\nmCSM1hKtjIHUc5wASvQ0jvG4OH7f+/Qt9dqZSNbUTHO0xdcB7/KJJdvHcKR4YkCX\nkih2WrO2yUtvWQkkqkPuTUsAbUZ5duKzLmkBFVRkHKFlOtmsYsiB+agjZVxkNbP3\njJM/hAbtKwKBgGJfT1X9/FmMVme0Oi/BDxNkcalbtTETsmBlVhtmqKwOTbB98XH0\ncEHIJrxG3D/M7XwFn6v3WHUmKDiT3gYy/S+ZkcdxTOuyUXZ9mBNI3dnRIHZphs95\n8+3eB5Na1m2AoxY33za/HzB4R6eQSS5B0W/qVSV88+3Sr15seJkBp+9/AoGAfYeU\nhExeKwhO6UtvFGqjN4MF36gJC/PcT78qzT9MqsN36MDoM4kdhDdI81y4nca4skTA\nv3odXzGuL5K8FJo7ieFO6bpDfLGorhGMbdLfy7RF3c1HJsigSXqxjmZXqDOAlURD\n8mKGVBhCWMiPz8xvAJWy+xcF4ykyb/4eI/xKUmECgYAxFYssa7XzFWt9Bzf4C9zl\nvIpjEyJ2ZAFvIpusmwWOCfvgqwUvZi9dc6qiKOABWAWhQ7LJvFg5OfNn3BgdF5Pz\nPTlSottyrvmDGuPQLic3lP9ESYu6QwZCJOLNSkopdtO5lC/xPsqlrR6HVUpJm7Uj\nHMzd55iDmsKyteta2vLPew==\n-----END PRIVATE KEY-----\n",
+  "client_email": "brakgarantis55@brakpoduction55.iam.gserviceaccount.com",
+  "client_id": "111941743629865868932",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/brakgarantis55%40brakpoduction55.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
