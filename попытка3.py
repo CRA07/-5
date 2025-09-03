@@ -10,18 +10,15 @@ from threading import Lock
 
 app = Flask(__name__)
 
-# Настройка Google Sheets
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 SERVICE_ACCOUNT_FILE = 'brakpoduction55-84893ca2af64.json'  # JSON файл
-SPREADSHEET_ID = '1-7tesS_fvz_Kk9ZkWCPsZfT5uyBu3hgwbImqMylFbeI'  # Из URL: https://docs.google.com/spreadsheets/d/ВАШ_ID/
+SPREADSHEET_ID = '1-7tesS_fvz_Kk9ZkWCPsZfT5uyBu3hgwbImqMylFbeI'  # Из UR
 
-# Названия листов
 SHEET_NAMES = {
     'warehouse': 'Брак Склада',
     'production': 'Производство'
 }
 
-# Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -32,12 +29,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Параметры сервера
+
+
 WEBHOOK_TOKEN = "token20220705"
 PORT = 8000
 BIND_HOST = "0.0.0.0"
 
-# Блокировка для thread safety
+
 lock = Lock()
 
 PRODUCTS = ["STZ_Agenta_Aжента_100", "PML_PML_Завтрак_200", "PML_PML_Хлорофил_500", "KSM_kosmoteros_СывВитКомп_30",
@@ -201,7 +199,6 @@ MARKETPLACES = ["вб", "озон", "ям"]
 def init_google_sheets():
     """Инициализация подключения к Google Sheets"""
     try:
-        # Авторизация через service account
         creds = Credentials.from_service_account_file(
             SERVICE_ACCOUNT_FILE,
             scopes=SCOPES
@@ -223,7 +220,6 @@ def ensure_sheets_exist(spreadsheet):
     try:
         existing_sheets = [sheet.title for sheet in spreadsheet.worksheets()]
 
-        # Создаем лист для склада если его нет
         if SHEET_NAMES['warehouse'] not in existing_sheets:
             warehouse_sheet = spreadsheet.add_worksheet(
                 title=SHEET_NAMES['warehouse'],
@@ -236,7 +232,7 @@ def ensure_sheets_exist(spreadsheet):
             ])
             logger.info(f"Создан лист: {SHEET_NAMES['warehouse']}")
 
-        # Создаем лист для производства если его нет
+
         if SHEET_NAMES['production'] not in existing_sheets:
             production_sheet = spreadsheet.add_worksheet(
                 title=SHEET_NAMES['production'],
@@ -264,13 +260,12 @@ def write_to_google_sheets(data, sheet_type):
             if not spreadsheet:
                 return False
 
-            # Проверяем и создаем листы если нужно
             ensure_sheets_exist(spreadsheet)
 
             sheet_name = SHEET_NAMES[sheet_type]
             worksheet = spreadsheet.worksheet(sheet_name)
 
-            # Добавляем новую строку
+
             worksheet.append_row(data)
 
             logger.info(f"Данные записаны в {sheet_name}")
@@ -380,7 +375,6 @@ if __name__ == "__main__":
     # Установите зависимости
     logger.info("Установите зависимости: pip install flask gspread google-auth")
 
-    # Проверяем подключение при запуске
     logger.info("Запуск сервера...")
 
     spreadsheet = init_google_sheets()
@@ -397,6 +391,7 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
 
