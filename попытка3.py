@@ -310,7 +310,7 @@ def webhook():
         logger.info(f"Обработка запроса от {author}: {text}")
 
         # Обработка сообщения для склада
-         if not product or not defect:
+        if not product or not defect:
                 logger.warning(f"Не найдены продукт или дефект: {text}")
                 return jsonify({"error": "Product or defect not found"}), 400
 
@@ -386,6 +386,7 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
 
