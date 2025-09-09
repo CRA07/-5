@@ -310,52 +310,38 @@ def webhook():
         logger.info(f"Обработка запроса от {author}: {text}")
 
         # Обработка сообщения для склада
-         if not defect:
-                success = write_to_google_sheets([
-                    time_str,
-                    author,
-                    "",  # Пустой код продукта
-                    marketplace if marketplace else "",
-                    "",  # Пустое описание проблемы
-                    "",  # Пустая характеристика
-                    text  # Текст сообщения
-                ], "warehouse")
-            else:
-                success = write_to_google_sheets([
-                    time_str,
-                    author,
-                    product,
-                    marketplace if marketplace else "",
-                    defect,
-                    DEFECT_CATEGORIES.get(defect, ""),
-                    text
-                ], "warehouse")
+         if not product or not defect:
+                logger.warning(f"Не найдены продукт или дефект: {text}")
+                return jsonify({"error": "Product or defect not found"}), 400
+
+            success = write_to_google_sheets([
+                time_str,
+                author,
+                product,
+                marketplace if marketplace else "",
+                defect,
+                DEFECT_CATEGORIES.get(defect, ""),
+                text
+            ], "warehouse")
 
             return jsonify({"success": success}), 200 if success else 500
 
-        
         # Обработка сообщения для производства
         elif text.startswith("#производство"):
             product = find_match(text, PRODUCTS)
             defect = find_match(text, PRODUCTION_DEFECTS)
 
-            # Если проблема не найдена в списке, записываем только текст
-            if not defect:
-                success = write_to_google_sheets([
-                    time_str,
-                    author,
-                    "",  # Пустой код продукта
-                    "",  # Пустое описание проблемы
-                    text  # Текст сообщения
-                ], "production")
-            else:
-                success = write_to_google_sheets([
-                    time_str,
-                    author,
-                    product,
-                    defect,
-                    text
-                ], "production")
+            if not product or not defect:
+                logger.warning(f"Не найдены продукт или дефект: {text}")
+                return jsonify({"error": "Product or defect not found"}), 400
+
+            success = write_to_google_sheets([
+                time_str,
+                author,
+                product,
+                defect,
+                text
+            ], "production")
 
             return jsonify({"success": success}), 200 if success else 500
 
@@ -400,6 +386,7 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
 
