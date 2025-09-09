@@ -309,7 +309,6 @@ def webhook():
         time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         logger.info(f"Обработка запроса от {author}: {text}")
 
-        # Обработка сообщения для склада
         if not product or not defect:
                 logger.warning(f"Не найдены продукт или дефект: {text}")
                 return jsonify({"error": "Product or defect not found"}), 400
@@ -366,6 +365,19 @@ def health_check():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route("/health", methods=["GET"])
+def health_check():
+    """Проверка работоспособности"""
+    try:
+        spreadsheet = init_google_sheets()
+        if spreadsheet:
+            return jsonify({"status": "healthy", "sheets_connected": True})
+        else:
+            return jsonify({"status": "unhealthy", "sheets_connected": False}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 if __name__ == "__main__":
     # Установите зависимости
     logger.info("Установите зависимости: pip install flask gspread google-auth")
@@ -386,6 +398,7 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
 
