@@ -297,7 +297,7 @@ def webhook():
         logger.warning("Неверный токен доступа")
         return jsonify({"error": "Forbidden"}), 403
 
-    try:
+        try:
         data = request.get_json()
         if not data:
             logger.error("Пустой запрос")
@@ -315,49 +315,61 @@ def webhook():
             defect = find_match(text, WAREHOUSE_DEFECTS)
             marketplace = find_match(text, MARKETPLACES)
 
-            if not product or not defect:
-                logger.warning(f"Не найдены продукт или дефект: {text}")
-                return jsonify({"error": "Product or defect not found"}), 400
 
-            success = write_to_google_sheets([
+                # Обработка сообщения для склада
+            if not defect:
+                success = write_to_google_sheets([
                 time_str,
                 author,
-                product,
+                "",  # Пустой код продукта
                 marketplace if marketplace else "",
-                defect,
-                DEFECT_CATEGORIES.get(defect, ""),
-                text
-            ], "warehouse")
+                "",  # Пустое описание проблемы
+                "",  # Пустая характеристика
+                text  # Текст сообщения
+                ], "warehouse")
+            else:
+                success = write_to_google_sheets([
+                    time_str,
+                    author,
+                    product,
+                    marketplace if marketplace else "",
+                    defect,
+                    DEFECT_CATEGORIES.get(defect, ""),
+                    text
+                    ], "warehouse")
 
-            return jsonify({"success": success}), 200 if success else 500
+                return jsonify({"success": "Data provided"}), 400
 
-        # Обработка сообщения для производства
+            # Обработка сообщения для производства
         elif text.startswith("#производство"):
             product = find_match(text, PRODUCTS)
             defect = find_match(text, PRODUCTION_DEFECTS)
             marketplace = find_match(text, MARKETPLACES)
 
-            if not product or not defect:
-                logger.warning(f"Не найдены продукт или дефект: {text}")
-                return jsonify({"error": "Product or defect not found"}), 400
-
-            success = write_to_google_sheets([
-                time_str,
-                author,
-                product,
-                marketplace if marketplace else "",
-                defect,
-                text
-            ], "production")
-
-            return jsonify({"success": success}), 200 if success else 500
-
-        logger.warning(f"Неизвестная команда: {text}")
-        return jsonify({"error": "Unrecognized command"}), 400
-
+            # Если проблема не найдена в списке, записываем только текст
+            if not defect:
+                success = write_to_google_sheets([
+                    time_str,
+                    author,
+                    "",  # Пустой код продукта
+                    marketplace if marketplace else "",
+                    "",  # Пустое описание проблемы
+                    text  # Текст сообщения
+                ], "production")
+            else:
+                success = write_to_google_sheets([
+                    time_str,
+                    author,
+                    product,
+                    marketplace if marketplace else "",
+                    defect,
+                    text
+                ], "production")
+                
+                return jsonify({"success": "Data provided"}), 400
     except Exception as e:
-        logger.error(f"Ошибка обработки запроса: {e}")
-        return jsonify({"error": "Internal Server Error"}), 500
+        logger.error(f"Ошибка записи в Google Sheets: {e}")
+        return False
 
 
 @app.route("/health", methods=["GET"])
@@ -393,6 +405,7 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
 
