@@ -240,7 +240,7 @@ def ensure_sheets_exist(spreadsheet):
                 cols=10
             )
             production_sheet.append_row([
-                "Дата", "Автор", "Код продукта",
+                "Дата", "Автор", "Код продукта", "Маркетплейс",
                 "Описание проблемы", "Текст сообщения"
             ])
             logger.info(f"Создан лист: {SHEET_NAMES['production']}")
@@ -335,6 +335,7 @@ def webhook():
         elif text.startswith("#производство"):
             product = find_match(text, PRODUCTS)
             defect = find_match(text, PRODUCTION_DEFECTS)
+            marketplace = find_match(text, MARKETPLACES)
 
             if not product or not defect:
                 logger.warning(f"Не найдены продукт или дефект: {text}")
@@ -344,6 +345,7 @@ def webhook():
                 time_str,
                 author,
                 product,
+                marketplace if marketplace else "",
                 defect,
                 text
             ], "production")
@@ -391,6 +393,7 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
 
