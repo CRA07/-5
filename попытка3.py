@@ -7,6 +7,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 from threading import Lock
 
+
 app = Flask(__name__)
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
@@ -28,9 +29,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-WEBHOOK_TOKEN = "token20041201"
+
+
+WEBHOOK_TOKEN = "token20220705"
 PORT = 8000
 BIND_HOST = "0.0.0.0"
+
 
 lock = Lock()
 
@@ -164,6 +168,7 @@ PRODUCTS = ["STZ_Agenta_Aжента_100", "PML_PML_Завтрак_200", "PML_PML
             "GRT_HealthIs_Карнитин_90", "GRT_Handy_МассажноеМаслоДляТела_500", "GRT_HealthIs_Кальций_1000_120",
             "GRT_Kottur_СПФДляЛица_50", "GRT_HealthIs_Коллаген_180", "GRT_HealthIs_Аргинин_180",
             "GRT_HealthIs_Аргинин_90", ]
+
 
 WAREHOUSE_DEFECTS = ["пришел другой дозатор", "нет этикетки", "нет дозатора",
                      "нет товара", "пришел разбитым", "перепутан штрихкод", "перепутан товар",
@@ -227,6 +232,7 @@ def ensure_sheets_exist(spreadsheet):
             ])
             logger.info(f"Создан лист: {SHEET_NAMES['warehouse']}")
 
+
         if SHEET_NAMES['production'] not in existing_sheets:
             production_sheet = spreadsheet.add_worksheet(
                 title=SHEET_NAMES['production'],
@@ -258,6 +264,7 @@ def write_to_google_sheets(data, sheet_type):
 
             sheet_name = SHEET_NAMES[sheet_type]
             worksheet = spreadsheet.worksheet(sheet_name)
+
 
             worksheet.append_row(data)
 
@@ -302,22 +309,23 @@ def webhook():
             time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             logger.info(f"Обработка запроса от {author}: {text}")
 
-            # Обработка сообщения для склада
+        # Обработка сообщения для склада
             if text.startswith("#склад"):
                 product = find_match(text, PRODUCTS)
                 defect = find_match(text, WAREHOUSE_DEFECTS)
                 marketplace = find_match(text, MARKETPLACES)
 
+
                 # Обработка сообщения для склада
                 if not defect:
                     success = write_to_google_sheets([
-                        time_str,
-                        author,
-                        "",  # Пустой код продукта
-                        marketplace if marketplace else "",
-                        "",  # Пустое описание проблемы
-                        "",  # Пустая характеристика
-                        text  # Текст сообщения
+                    time_str,
+                    author,
+                    "",  # Пустой код продукта
+                    marketplace if marketplace else "",
+                    "",  # Пустое описание проблемы
+                    "",  # Пустая характеристика
+                    text  # Текст сообщения
                     ], "warehouse")
                 else:
                     success = write_to_google_sheets([
@@ -328,9 +336,9 @@ def webhook():
                         defect,
                         DEFECT_CATEGORIES.get(defect, ""),
                         text
-                    ], "warehouse")
+                        ], "warehouse")
                     return jsonify({"success": "Data provided"}), 400
-
+                    
 
             # Обработка сообщения для производства
             elif text.startswith("#производство"):
@@ -338,7 +346,7 @@ def webhook():
                 defect = find_match(text, PRODUCTION_DEFECTS)
                 marketplace = find_match(text, MARKETPLACES)
 
-                # Если проблема не найдена в списке, записываем только текст
+            # Если проблема не найдена в списке, записываем только текст
                 if not defect:
                     success = write_to_google_sheets([
                         time_str,
@@ -347,7 +355,7 @@ def webhook():
                         marketplace if marketplace else "",
                         "",  # Пустое описание проблемы
                         text  # Текст сообщения
-                    ], "production")
+                        ], "production")
                 else:
                     success = write_to_google_sheets([
                         time_str,
@@ -356,8 +364,8 @@ def webhook():
                         marketplace if marketplace else "",
                         defect,
                         text
-                    ], "production")
-
+                        ], "production")
+                
                     return jsonify({"success": "Data provided"}), 400
         except Exception as e:
             logger.error(f"Ошибка записи в Google Sheets: {e}")
@@ -398,6 +406,17 @@ if __name__ == "__main__":
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
 
+
+
+
+
+
+
+
+
+
+
+
 import os
 import re
 from flask import Flask, request, jsonify
@@ -406,6 +425,7 @@ import logging
 import gspread
 from google.oauth2.service_account import Credentials
 from threading import Lock
+
 
 app = Flask(__name__)
 
@@ -428,9 +448,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-WEBHOOK_TOKEN = "token20041201"
+
+
+WEBHOOK_TOKEN = "token20220705"
 PORT = 8000
 BIND_HOST = "0.0.0.0"
+
 
 lock = Lock()
 
@@ -565,6 +588,7 @@ PRODUCTS = ["STZ_Agenta_Aжента_100", "PML_PML_Завтрак_200", "PML_PML
             "GRT_Kottur_СПФДляЛица_50", "GRT_HealthIs_Коллаген_180", "GRT_HealthIs_Аргинин_180",
             "GRT_HealthIs_Аргинин_90", ]
 
+
 WAREHOUSE_DEFECTS = ["пришел другой дозатор", "нет этикетки", "нет дозатора",
                      "нет товара", "пришел разбитым", "перепутан штрихкод", "перепутан товар",
                      "брак", "проблема с этикеткой", "просрочка", "нет упаковки"]
@@ -627,6 +651,7 @@ def ensure_sheets_exist(spreadsheet):
             ])
             logger.info(f"Создан лист: {SHEET_NAMES['warehouse']}")
 
+
         if SHEET_NAMES['production'] not in existing_sheets:
             production_sheet = spreadsheet.add_worksheet(
                 title=SHEET_NAMES['production'],
@@ -659,6 +684,7 @@ def write_to_google_sheets(data, sheet_type):
             sheet_name = SHEET_NAMES[sheet_type]
             worksheet = spreadsheet.worksheet(sheet_name)
 
+
             worksheet.append_row(data)
 
             logger.info(f"Данные записаны в {sheet_name}")
@@ -683,12 +709,17 @@ def find_match(text, collection):
     return ""
 
 
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
     """Обработчик входящих запросов"""
     if request.args.get("token") != WEBHOOK_TOKEN:
         logger.warning("Неверный токен доступа")
         return jsonify({"error": "Forbidden"}), 403
+
+
+
+
 
     try:
         data = request.get_json()
@@ -708,16 +739,17 @@ def webhook():
             defect = find_match(text, WAREHOUSE_DEFECTS)
             marketplace = find_match(text, MARKETPLACES)
 
-            # Обработка сообщения для склада
+
+                # Обработка сообщения для склада
             if not defect:
                 success = write_to_google_sheets([
-                    time_str,
-                    author,
-                    "",  # Пустой код продукта
-                    marketplace if marketplace else "",
-                    "",  # Пустое описание проблемы
-                    "",  # Пустая характеристика
-                    text  # Текст сообщения
+                time_str,
+                author,
+                "",  # Пустой код продукта
+                marketplace if marketplace else "",
+                "",  # Пустое описание проблемы
+                "",  # Пустая характеристика
+                text  # Текст сообщения
                 ], "warehouse")
             else:
                 success = write_to_google_sheets([
@@ -728,7 +760,7 @@ def webhook():
                     defect,
                     DEFECT_CATEGORIES.get(defect, ""),
                     text
-                ], "warehouse")
+                    ], "warehouse")
 
                 return jsonify({"success": "Data provided"}), 400
 
@@ -764,6 +796,20 @@ def webhook():
         return False
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
     # Установите зависимости
     logger.info("Установите зависимости: pip install flask gspread google-auth")
@@ -784,5 +830,4 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
-
 
