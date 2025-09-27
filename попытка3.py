@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 
-WEBHOOK_TOKEN = "token20220706"
+WEBHOOK_TOKEN = "token20220705"
 PORT = 8000
 BIND_HOST = "0.0.0.0"
 
@@ -450,7 +450,7 @@ logger = logging.getLogger(__name__)
 
 
 
-WEBHOOK_TOKEN = "token20220706"
+WEBHOOK_TOKEN = "token20220705"
 PORT = 8000
 BIND_HOST = "0.0.0.0"
 
@@ -830,5 +830,6 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
