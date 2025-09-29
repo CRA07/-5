@@ -192,7 +192,6 @@ MARKETPLACES = ["вб", "озон", "ям"]
 
 
 def init_google_sheets():
-    """Инициализация подключения к Google Sheets"""
     try:
         creds = Credentials.from_service_account_file(
             SERVICE_ACCOUNT_FILE,
@@ -247,7 +246,6 @@ def ensure_sheets_exist(spreadsheet):
 
 
 def write_to_google_sheets(data, sheet_type):
-    """Записывает данные в Google Sheets"""
     try:
         with lock:
             spreadsheet = init_google_sheets()
@@ -270,12 +268,10 @@ def write_to_google_sheets(data, sheet_type):
 
 
 def normalize(text):
-    """Нормализация текста для поиска"""
     return re.sub(r'[\s_]+', '', text.lower())
 
 
 def find_match(text, collection):
-    """Поиск совпадения в коллекции"""
     text_norm = normalize(text)
     for item in collection:
         if normalize(item) in text_norm:
@@ -285,7 +281,6 @@ def find_match(text, collection):
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    """Обработчик входящих запросов"""
     if request.args.get("token") != WEBHOOK_TOKEN:
         logger.warning("Неверный токен доступа")
         return jsonify({"error": "Forbidden"}), 403
@@ -393,4 +388,5 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
