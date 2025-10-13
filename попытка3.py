@@ -163,7 +163,7 @@ PRODUCTS = ["STZ_Agenta_Aжента_100", "PML_PML_Завтрак_200", "PML_PML
             "GRT_Kottur_МаслоДляЗагара_150", "GRT_Kottur_КремСМочевиной_500", "GRT_HealthIs_Креатин_300",
             "GRT_HealthIs_Карнитин_90", "GRT_Handy_МассажноеМаслоДляТела_500", "GRT_HealthIs_Кальций_1000_120",
             "GRT_Kottur_СПФДляЛица_50", "GRT_HealthIs_Коллаген_180", "GRT_HealthIs_Аргинин_180",
-            "GRT_HealthIs_Аргинин_90", ]
+            "GRT_HealthIs_Аргинин_90", "GRT_Handy_МагниевоеМасло_200"]
 
 WAREHOUSE_DEFECTS = ["пришел другой дозатор", "нет этикетки", "нет дозатора",
                      "нет товара", "пришел разбитым", "перепутан штрихкод", "перепутан товар",
@@ -388,5 +388,6 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
