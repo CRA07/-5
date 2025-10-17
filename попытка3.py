@@ -325,9 +325,7 @@ def webhook():
                     ], "warehouse")
 
                 return jsonify({"success": "Data provided"}), 400
-    except Exception as e:
-        logger.error(f"Ошибка записи в Google Sheets: {e}")
-        return False
+
 
         elif text.startswith("#производство"):
             product = find_match(text, PRODUCTS)
@@ -390,6 +388,7 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
 
