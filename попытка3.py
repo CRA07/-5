@@ -302,7 +302,6 @@ def webhook():
             product = find_match(text, PRODUCTS)
             defect = find_match(text, WAREHOUSE_DEFECTS)
             marketplace = find_match(text, MARKETPLACES)
-
             
             if not defect:
                 success = write_to_google_sheets([
@@ -313,7 +312,7 @@ def webhook():
                     "",  # Пустое описание проблемы
                     "",  # Пустая характеристика
                     text  # Текст сообщения
-                ], "warehouse")
+                    ], "warehouse")
             else:
                 success = write_to_google_sheets([
                     time_str,
@@ -323,9 +322,12 @@ def webhook():
                     defect,
                     DEFECT_CATEGORIES.get(defect, ""),
                     text
-                ], "warehouse")
+                    ], "warehouse")
 
                 return jsonify({"success": "Data provided"}), 400
+    except Exception as e:
+        logger.error(f"Ошибка записи в Google Sheets: {e}")
+        return False
 
         elif text.startswith("#производство"):
             product = find_match(text, PRODUCTS)
@@ -340,7 +342,7 @@ def webhook():
                     marketplace if marketplace else "",
                     "",  # Пустое описание проблемы
                     text  # Текст сообщения
-                ], "production")
+                    ], "production")
             else:
                 success = write_to_google_sheets([
                     time_str,
@@ -349,7 +351,7 @@ def webhook():
                     marketplace if marketplace else "",
                     defect,
                     text
-                ], "production")
+                    ], "production")
 
                 return jsonify({"success": "Data provided"}), 400
     except Exception as e:
@@ -388,6 +390,7 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
 
