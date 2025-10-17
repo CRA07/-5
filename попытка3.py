@@ -163,7 +163,7 @@ PRODUCTS = ["STZ_Agenta_Aжента_100", "PML_PML_Завтрак_200", "PML_PML
             "GRT_Kottur_МаслоДляЗагара_150", "GRT_Kottur_КремСМочевиной_500", "GRT_HealthIs_Креатин_300",
             "GRT_HealthIs_Карнитин_90", "GRT_Handy_МассажноеМаслоДляТела_500", "GRT_HealthIs_Кальций_1000_120",
             "GRT_Kottur_СПФДляЛица_50", "GRT_HealthIs_Коллаген_180", "GRT_HealthIs_Аргинин_180",
-            "GRT_HealthIs_Аргинин_90", "GRT_Handy_МагниевоеМасло_200"]
+            "GRT_HealthIs_Аргинин_90", "GRT_Handy_МагниевоеМасло_200", ]
 
 WAREHOUSE_DEFECTS = ["пришел другой дозатор", "нет этикетки", "нет дозатора",
                      "нет товара", "пришел разбитым", "перепутан штрихкод", "перепутан товар",
@@ -312,7 +312,7 @@ def webhook():
                     "",  # Пустое описание проблемы
                     "",  # Пустая характеристика
                     text  # Текст сообщения
-                    ], "warehouse")
+                ], "warehouse")
             else:
                 success = write_to_google_sheets([
                     time_str,
@@ -322,9 +322,14 @@ def webhook():
                     defect,
                     DEFECT_CATEGORIES.get(defect, ""),
                     text
-                    ], "warehouse")
+                ], "warehouse")
 
-                return jsonify({"success": "Data provided"}), 400
+            if success:
+                logger.info("328")
+                return jsonify({"success": True}), 200
+            else:
+                logger.error("331")
+                return jsonify({"error": "Failed to write data"}), 500
 
 
         elif text.startswith("#производство"):
@@ -340,7 +345,7 @@ def webhook():
                     marketplace if marketplace else "",
                     "",  # Пустое описание проблемы
                     text  # Текст сообщения
-                    ], "production")
+                ], "production")
             else:
                 success = write_to_google_sheets([
                     time_str,
@@ -349,7 +354,7 @@ def webhook():
                     marketplace if marketplace else "",
                     defect,
                     text
-                    ], "production")
+                ], "production")
 
                 return jsonify({"success": "Data provided"}), 400
     except Exception as e:
@@ -388,6 +393,7 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
 
