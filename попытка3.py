@@ -10,7 +10,7 @@ from threading import Lock
 app = Flask(__name__)
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-SERVICE_ACCOUNT_FILE = 'brakpoduction55-84893ca2af64.json'  # JSON файл
+SERVICE_ACCOUNT_FILE = 'brakpoduction55-e602b79e42d1.json'  # JSON файл
 SPREADSHEET_ID = '1-7tesS_fvz_Kk9ZkWCPsZfT5uyBu3hgwbImqMylFbeI'  # Из UR
 
 SHEET_NAMES = {
@@ -388,4 +388,5 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
