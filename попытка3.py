@@ -201,16 +201,15 @@ def init_google_sheets():
         client = gspread.authorize(creds)
         spreadsheet = client.open_by_key(SPREADSHEET_ID)
 
-        logger.info("Успешное подключение к Google Sheets")
+        logger.info("успешное подключение к Google Sheets")
         return spreadsheet
 
     except Exception as e:
-        logger.error(f"Ошибка подключения к Google Sheets: {e}")
+        logger.error(f"ошибка подключения к Google Sheets: {e}")
         return None
 
 
 def ensure_sheets_exist(spreadsheet):
-    """Проверяет и создает необходимые листы"""
     try:
         existing_sheets = [sheet.title for sheet in spreadsheet.worksheets()]
 
@@ -236,12 +235,12 @@ def ensure_sheets_exist(spreadsheet):
                 "Дата", "Автор", "Код продукта", "Маркетплейс",
                 "Описание проблемы", "Текст сообщения"
             ])
-            logger.info(f"Создан лист: {SHEET_NAMES['production']}")
+            logger.info(f"создан лист: {SHEET_NAMES['production']}")
 
         return True
 
     except Exception as e:
-        logger.error(f"Ошибка создания листов: {e}")
+        logger.error(f"ошибка листов: {e}")
         return False
 
 
@@ -259,11 +258,11 @@ def write_to_google_sheets(data, sheet_type):
 
             worksheet.append_row(data)
 
-            logger.info(f"Данные записаны в {sheet_name}")
+            logger.info(f"данные записаны в {sheet_name}")
             return True
 
     except Exception as e:
-        logger.error(f"Ошибка записи в Google Sheets: {e}")
+        logger.error(f"хуйня в Google Sheets: {e}")
         return False
 
 
@@ -282,7 +281,7 @@ def find_match(text, collection):
 @app.route("/webhook", methods=["POST"])
 def webhook():
     if request.args.get("token") != WEBHOOK_TOKEN:
-        logger.warning("Неверный токен доступа")
+        logger.warning("неверный токен")
         return jsonify({"error": "Forbidden"}), 403
 
     try:
@@ -295,7 +294,7 @@ def webhook():
         author = data.get("user_id", "Неизвестно")
 
         time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        logger.info(f"Обработка запроса от {author}: {text}")
+        logger.info(f"обработка запроса от {author}: {text}")
 
         
         if text.startswith("#склад"):
@@ -308,11 +307,11 @@ def webhook():
                 success = write_to_google_sheets([
                     time_str,
                     author,
-                    "",  # Пустой код продукта
+                    "",
                     marketplace if marketplace else "",
-                    "",  # Пустое описание проблемы
-                    "",  # Пустая характеристика
-                    text  # Текст сообщения
+                    "",
+                    "", 
+                    text  
                 ], "warehouse")
             else:
                 success = write_to_google_sheets([
@@ -336,10 +335,10 @@ def webhook():
                 success = write_to_google_sheets([
                     time_str,
                     author,
-                    "",  # Пустой код продукта
+                    "", 
                     marketplace if marketplace else "",
-                    "",  # Пустое описание проблемы
-                    text  # Текст сообщения
+                    "", 
+                    text 
                 ], "production")
             else:
                 success = write_to_google_sheets([
@@ -353,7 +352,7 @@ def webhook():
 
                 return jsonify({"success": "Data provided"}), 400
     except Exception as e:
-        logger.error(f"Ошибка записи в Google Sheets: {e}")
+        logger.error(f"хуйня в Google Sheets: {e}")
         return False
 
 
@@ -370,23 +369,24 @@ def health_check():
 
 
 if __name__ == "__main__":
-    logger.info("Установите зависимости: pip install flask gspread google-auth")
+    logger.info("зависимости")
 
-    logger.info("Запуск сервера...")
+    logger.info("сервер")
 
     spreadsheet = init_google_sheets()
     if spreadsheet:
-        logger.info("Успешное подключение к Google Sheets")
+        logger.info("все ок гугл щитс")
         ensure_sheets_exist(spreadsheet)
     else:
-        logger.error("Не удалось подключиться к Google Sheets")
-        logger.error("1. Проверьте наличие файла service-account.json")
-        logger.error("2. Проверьте ID таблицы")
-        logger.error("3. Дайте доступ к таблице для service account")
+        logger.error("1")
+        logger.error("2")
+        logger.error("3")
+        logger.error("4")
 
     logger.info(f"Сервер запущен на {BIND_HOST}:{PORT}")
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
