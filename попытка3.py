@@ -1,4 +1,5 @@
 import os
+import json
 import re
 from flask import Flask, request, jsonify
 from datetime import datetime
@@ -10,7 +11,16 @@ from threading import Lock
 app = Flask(__name__)
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-SERVICE_ACCOUNT_FILE = 'brakpoduction55-e602b79e42d1.json'  # JSON файл
+
+def load_config():
+    try:
+        with open('config.json', 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
+config_data = load_config()
+
+
 SPREADSHEET_ID = '1-7tesS_fvz_Kk9ZkWCPsZfT5uyBu3hgwbImqMylFbeI'  # Из UR
 
 SHEET_NAMES = {
@@ -193,8 +203,22 @@ MARKETPLACES = ["вб", "озон", "ям"]
 
 def init_google_sheets():
     try:
-        creds = Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE,
+        service_account_data = {
+            "type": "service_account",
+            "project_id": "brakpoduction55",
+            "private_key_id": config_data["private_key_id"],
+            "private_key": config_data["private_key"].replace('\\n', '\n'),
+            "client_email": "brakgarantis55@brakpoduction55.iam.gserviceaccount.com",
+            "client_id": "111941743629865868932",
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/brakgarantis55%40brakpoduction55.iam.gserviceaccount.com",
+            "universe_domain": "googleapis.com"
+        }
+
+        creds = Credentials.from_service_account_info(
+            service_account_data,
             scopes=SCOPES
         )
 
@@ -296,13 +320,11 @@ def webhook():
         time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         logger.info(f"обработка запроса от {author}: {text}")
 
-        
         if text.startswith("#склад"):
             product = find_match(text, PRODUCTS)
             defect = find_match(text, WAREHOUSE_DEFECTS)
             marketplace = find_match(text, MARKETPLACES)
 
-            
             if not defect:
                 success = write_to_google_sheets([
                     time_str,
@@ -310,8 +332,8 @@ def webhook():
                     "",
                     marketplace if marketplace else "",
                     "",
-                    "", 
-                    text  
+                    "",
+                    text
                 ], "warehouse")
             else:
                 success = write_to_google_sheets([
@@ -335,10 +357,10 @@ def webhook():
                 success = write_to_google_sheets([
                     time_str,
                     author,
-                    "", 
+                    "",
                     marketplace if marketplace else "",
-                    "", 
-                    text 
+                    "",
+                    text
                 ], "production")
             else:
                 success = write_to_google_sheets([
@@ -387,6 +409,5 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
-
 
 
