@@ -7,19 +7,11 @@ import logging
 import gspread
 from google.oauth2.service_account import Credentials
 from threading import Lock
+from dotenv import load_dotenv, dotenv_values
 
 app = Flask(__name__)
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-
-def load_config():
-    try:
-        with open('config.json', 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return None
-config_data = load_config()
-
 
 SPREADSHEET_ID = '1-7tesS_fvz_Kk9ZkWCPsZfT5uyBu3hgwbImqMylFbeI'  # Из UR
 
@@ -206,8 +198,8 @@ def init_google_sheets():
         service_account_data = {
             "type": "service_account",
             "project_id": "brakpoduction55",
-            "private_key_id": config_data["private_key_id"],
-            "private_key": config_data["private_key"].replace('\\n', '\n'),
+            "private_key_id": load_dotenv("KEY_1"),
+            "private_key": load_dotenv("KEY_2").replace('\\n', '\n'),
             "client_email": "brakgarantis55@brakpoduction55.iam.gserviceaccount.com",
             "client_id": "111941743629865868932",
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -409,5 +401,8 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
+
+
 
 
