@@ -199,7 +199,7 @@ def init_google_sheets():
             "type": "service_account",
             "project_id": "brakpoduction55",
             "private_key_id": load_dotenv("KEY_1"),
-            "private_key": load_dotenv("KEY_2").replace('\\n', '\n'),
+            "private_key": load_dotenv("KEY_2"),
             "client_email": "brakgarantis55@brakpoduction55.iam.gserviceaccount.com",
             "client_id": "111941743629865868932",
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -401,6 +401,7 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
 
