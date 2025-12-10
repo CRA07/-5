@@ -7,7 +7,6 @@ import logging
 import gspread
 from google.oauth2.service_account import Credentials
 from threading import Lock
-from dotenv import load_dotenv, dotenv_values
 
 app = Flask(__name__)
 
@@ -195,11 +194,18 @@ MARKETPLACES = ["вб", "озон", "ям"]
 
 def init_google_sheets():
     try:
+        private_key_id = os.environ.get("KEY_1")
+        private_key = os.environ.get("KEY_2")
+
+        if not private_key_id or not private_key:
+            raise Exception("хуйня ебучая")
+
+        
         service_account_data = {
             "type": "service_account",
             "project_id": "brakpoduction55",
-            "private_key_id": load_dotenv("KEY_1"),
-            "private_key": load_dotenv("KEY_2"),
+            "private_key_id": private_key_id,
+            "private_key": private_key.replace("\\n", "\n"),
             "client_email": "brakgarantis55@brakpoduction55.iam.gserviceaccount.com",
             "client_id": "111941743629865868932",
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -401,6 +407,7 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
 
