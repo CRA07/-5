@@ -187,8 +187,10 @@ def webhook():
         text = str(data.get("content", "")).strip().lower()
         author = data.get("user_id", "Неизвестно")
 
-        time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        time_str = datetime.now().strftime("%Y-%m-%d")
         logger.info(f"обработка запроса от {author}: {text}")
+
+        success = False
 
         if text.startswith("#склад"):
             product = find_match(text, PRODUCTS)
@@ -216,8 +218,8 @@ def webhook():
                     text
                 ], "warehouse")
 
-                return jsonify({"success": "Data provided"}), 400
 
+        
         elif text.startswith("#производство"):
             product = find_match(text, PRODUCTS)
             defect = find_match(text, PRODUCTION_DEFECTS)
@@ -242,10 +244,16 @@ def webhook():
                     text
                 ], "production")
 
-                return jsonify({"success": "Data provided"}), 400
+        else:
+            return jsonify({"status": "ignored"}], 200
+        if success:
+            return jsonify({"status": "ok"}], 200
+        else:
+            return jsonify({"status": "failed"}], 500
+
     except Exception as e:
-        logger.error(f"хуйня в Google Sheets: {e}")
-        return False
+        logger.exception(f"хуйня в Google Sheets: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/health", methods=["GET"])
@@ -279,6 +287,7 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
 
