@@ -245,11 +245,11 @@ def webhook():
                 ], "production")
 
         else:
-            return jsonify({"status": "ignored"}], 200
+            return jsonify({"status": "ignored"}), 200
         if success:
-            return jsonify({"status": "ok"}], 200
+            return jsonify({"status": "ok"}), 200
         else:
-            return jsonify({"status": "failed"}], 500
+            return jsonify({"status": "failed"}), 500
 
     except Exception as e:
         logger.exception(f"хуйня в Google Sheets: {e}")
@@ -287,6 +287,7 @@ if __name__ == "__main__":
     logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
 
