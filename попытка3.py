@@ -268,7 +268,7 @@ def health_check():
 if __name__ == "__main__":
     pass
 
-    app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
 
