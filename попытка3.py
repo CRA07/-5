@@ -24,7 +24,6 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler('bot.log')
     ]
 )
 logger = logging.getLogger(__name__)
@@ -175,13 +174,11 @@ def find_match(text, collection):
 @app.route("/webhook", methods=["POST"])
 def webhook():
     if request.args.get("token") != WEBHOOK_TOKEN:
-        logger.warning("неверный токен")
         return jsonify({"error": "Forbidden"}), 403
 
     try:
         data = request.get_json()
         if not data:
-            logger.error("Пустой запрос")
             return jsonify({"error": "No data provided"}), 400
 
         text = str(data.get("content", "")).strip().lower()
@@ -269,24 +266,10 @@ def health_check():
 
 
 if __name__ == "__main__":
-    logger.info("зависимости")
-
-    logger.info("сервер")
-
-    spreadsheet = init_google_sheets()
-    if spreadsheet:
-        logger.info("все ок гугл щитс")
-        ensure_sheets_exist(spreadsheet)
-    else:
-        logger.error("1")
-        logger.error("2")
-        logger.error("3")
-        logger.error("4")
-
-    logger.info(f"Сервер запущен на {BIND_HOST}:{PORT}")
-    logger.info(f"Health check: http://{BIND_HOST}:{PORT}/health")
+    pass
 
     app.run(host=BIND_HOST, port=PORT, debug=True)
+
 
 
 
